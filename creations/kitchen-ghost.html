@@ -374,7 +374,7 @@
         <textarea id="chaosInput" class="chaos-textarea" rows="6" autofocus
           placeholder="half a lime, wilted spinach, 3 eggs, that mystery jar,&#10;soy sauce, leftover rice, questionable cheese..."></textarea>
         <div class="input-footer">
-          <span class="input-hint">⌘↵ to run</span>
+          <span class="input-hint">Ctrl + Enter to run</span>
           <button id="alchemizeBtn" class="alchemize-btn" disabled>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
             Alchemize
@@ -430,7 +430,7 @@
   <!-- FOOTER -->
   <footer class="footer">
     <span>KitchenGhost © 2026</span>
-    <span>Powered by Claude · Zero waste, maximum flavour</span>
+    <span>Runs on your device · Zero waste, maximum flavour</span>
   </footer>
 </div>
 
@@ -468,6 +468,151 @@
     { key: "chef",   cls: "card-chef",   iconKey: "chef",   label: "Chef's Save", tagColor: "rgba(245,240,232,.8)" },
     { key: "pantry", cls: "card-pantry", iconKey: "basket", label: "Pantry Fill", tagColor: "#e8602c" }
   ];
+
+  /* ────────────────────────────────────────────────────────────────────────
+     RECIPE MAKER — a fully client-side "alchemy" engine.
+     No servers. No API keys. It parses your messy fridge list and knits
+     together three plausible meals from a small kitchen-model of ingredients,
+     verbs, and pantry staples. The flavour of the original KitchenGhost,
+     powered by JavaScript instead of a language model.
+     ──────────────────────────────────────────────────────────────────────── */
+  var PANTRIES = {
+    grain:   ["rice", "pasta", "ramen noodles", "tortillas", "couscous", "bread", "potatoes", "baguette"],
+    aromatic:["garlic", "onion", "ginger", "scallions", "shallot", "chili flakes", "soy sauce", "olive oil"],
+    dairy:   ["olive oil", "butter", "parmesan", "cheddar", "heavy cream", "milk", "yogurt"],
+    tang:    ["lemon", "lime", "vinegar", "sriracha", "hot sauce", "mustard", "wasabi"],
+    herb:    ["parsley", "cilantro", "basil", "dill", "thyme", "rosemary"],
+    egg:     ["egg", "eggs", "feta", "tofu", "tahini"]
+  };
+
+  // Small ingredient → preparation language model. Anchored on the raw words
+  // the user types so the meal genuinely includes their fridge contents.
+  var ING_MAP = [
+    { re: /egg/i, appliance: "pan", treats: ["at the egg into 4", "whisk the eggs until frothy"], cook: "fry", plate: "" },
+    { re: /rice/, appliance: "pan", treats: ["stir 2 cups overnight rice"], cook: "pan-fry until the edges crisp", plate: "over the rice" },
+    { re: /pasta|noodle|spaghetti|macaroni/, appliance: "pot", treats: ["boil the pasta/bowls 9-10 min"], cook: "toss with sauce", plate: "over a bowl of the pasta" },
+    { re: /potato/, appliance: "pan", treats: ["dice the potatoes into 3cm chunks"], cook: "pan-fry until golden and crisp", plate: "on top of the potatoes" },
+    { re: /bread|baguette|wrap|pita|tortilla/, appliance: "oven/pan", treats: ["warm the bread in a dry pan"], cook: "toast until crisp on the edges", plate: "inside the warm bread" },
+    { re: /chicken/, appliance: "pan", treats: ["slice the chicken thinly against the grain"], cook: "pan-sear until golden and cooked through", plate: "over the chicken" },
+    { re: /beef|steak|mince|ground beef/, appliance: "pan", treats: ["pat the beef dry with paper towel"], cook: "sear hard until browned on both sides", plate: "over the beef" },
+    { re: /pork|bacon|sausage/, appliance: "pan", treats: ["sliced the pork into strips"], cook: "crisp it in its own fat", plate: "over the pork" },
+    { re: /shrimp|prawn|fish|salmon|tuna/, appliance: "pan", treats: ["pat the seafood dry"], cook: "sear 1-2 min per side", plate: "over the seafood" },
+    { re: /tofu/, appliance: "pan", treats: ["pat the tofu dry, cube it"], cook: "pan-fry until deeply crisp", plate: "over the tofu" },
+    { re: /mushroom/, appliance: "pan", treats: ["tear the mushrooms into bite-size pieces"], cook: "cook without moving until they brown", plate: "over the mushrooms" },
+    { re: /tomato|tomatoes/, appliance: "pan", treats: ["roughly chop the tomatoes"], cook: "simmer with a pinch of sugar", plate: "around the tomatoes" },
+    { re: /pepper|bell/, appliance: "pan", treats: ["cut the peppers into strips"], cook: "roast/broil until charred at the edges", plate: "over the peppers" },
+    { re: /onion/, appliance: "pan", treats: ["sliced the onion into half-moons"], cook: "cook low and slow until sweet and jammy", plate: "on the onions" },
+    { re: /garlic/, appliance: "pan", treats: ["smash the garlic cloves"], cook: "bloom in oil for 30s", plate: "with the garlic" },
+    { re: /spinach|kale|greens|arugula/, appliance: "pan", treats: ["wash and roughly chop the greens"], cook: "wilt in the pan's residual heat", plate: "over a bed of the greens" },
+    { re: /chees|cheddar|parmesan|feta|mozzarella/, appliance: "bowl", treats: ["grate the cheese"], cook: "melt through the sauce at the very end", plate: "under a shower of the cheese" },
+    { re: /milk|cream|butter|yogurt|sourcream/, appliance: "bowl", treats: ["warm the dairy gently"], cook: "emulsify into the sauce off the heat", plate: "with a dollop of the dairy" },
+    { re: /bean|beans|lentil|chickpea/, appliance: "pot", treats: ["drain and rinse the beans"], cook: "simmer until silky and thick", plate: "over a spoonful of the beans" },
+    { re: /corn|corn/, appliance: "pot", treats: ["char 2 cobs (or a can of corn) in a dry pan"], cook: "blistered in the dry pan", plate: "with the charred corn" },
+    { re: /sweet potato/, appliance: "oven", treats: ["cube the sweet potato"], cook: "roast at 220°C until jammy at the edges", plate: "under the sweet potato" },
+    { re: /sausage|hotdog|salami/, appliance: "pan", treats: ["slice the sausage on the bias"], cook: "crisp in a dry pan, set aside", plate: "over the sausage" },
+    { re: /avocado|guac/, appliance: "bowl", treats: ["smash the avocado with a little lime"], cook: "smash flat", plate: "on top of the avocado" },
+    { re: /carrot/, appliance: "pan", treats: ["peel the carrots into ribbons"], cook: "saute until just tender", plate: "under the carrot ribbons" },
+    { re: /broccoli|brocolli/, appliance: "pot", treats: ["cut the broccoli into florets"], cook: "steam 4 min, then char in a hot pan", plate: "over the broccoli" },
+    { re: /sauce|salsa|hoisin|bbq|ketchup|mayo|ranch|pesto/, appliance: "bowl", treats: ["loosen the sauce/thirty-second sauce with a splash of water"], cook: "slather on the hot thing", plate: "under a slick of the sauce" },
+    { re: /random|mystery|jar.../ , dummy: true }
+  ];
+
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function capitalizeAll(s) { return s.split(/\s+/).map(cap).filter(Boolean).join(' '); }
+
+  // Normalize "3 eggs, leftover rice, ..." → ["egg","rice",(etc)]
+  function normalizeList(raw) {
+    return raw.split(/,|\n|and |&/)
+      .map(function (t) { return t.replace(/^\d+\s*(x\s*)?/, '').trim().toLowerCase(); })
+      .filter(function (t) { return t.length > 1; });
+  }
+
+  function pickPantry(list, category, max) {
+    var got = 0, out = [];
+    list.forEach(function (item) {
+      if (got >= max) return;
+      (PANTRIES[category] || []).forEach(function (p) {
+        if (got >= max) return;
+        if (new RegExp(p).test(item)) { out.push(p); got++; }
+      });
+    });
+    // If none matched, backfill from the canonical pantry list
+    while (out.length < max) {
+      var cand = rnd(PANTRIES[category] || []);
+      if (out.indexOf(cand) === -1) out.push(cand);
+    }
+    return out.slice(0, max);
+  }
+
+  function toTitle(raw) {
+    return capitalizeAll((raw || 'that thing from your fridge').replace(/[,.]/g, ' ').replace(/\s+/g, ' ').trim());
+  }
+
+  function RecipeMaker() {}
+
+  RecipeMaker.prototype.make = function (userInput) {
+    var items = normalizeList(userInput);
+    var used = [];
+    var verb = function (i) {
+      var hit = ING_MAP.find(function (m) { return m.re.test(i); });
+      if (hit) {
+        used.push(hit);
+        return rnd(hit.treats) || '';
+      }
+      used.push({ re: /./, treats: ['use the ' + i] });
+      return 'use the ' + i;
+    };
+
+    var quick = {
+      title: toTitle(items[0] || 'Your fridge') + ' Pan Fry',
+      tagline: 'In under 15 minutes — you basically have a meal already.',
+      time: '12 mins',
+      ingredients: items.slice(0, 4),
+      steps: [
+        'Heat a pan on high, add a slick of olive oil.',
+        cap(verb(items[0] || 'leftover rice')) + ' in the hot pan.',
+        (items[1] ? cap(verb(items[1])) + ' in the same pan until both are hot and happy.' : 'Toss the last bits in too — golden edges are the point.'),
+        'Season with salt, pepper, and ' + rnd(['a squeeze of lime', 'a splash of soy', 'a little hot sauce', 'a knob of butter']) + '.',
+        'Eat it directly out of the pan. You earned it.'
+      ],
+      tip: 'The pan is the tool of kings — one pan, zero dishwasher guilt.'
+    };
+
+    var chef = {
+      title: cap(rnd(['Sear', 'Charred', 'Caramelized', 'Jammed'])) + ' ' + toTitle(items[0] || 'fridge') + ' over ' + rnd(['toast', 'rice', 'greens', 'onion jam']),
+      tagline: 'Restaurant move with fridge odds and ends. You already own the theatre.',
+      time: '25 mins',
+      ingredients: items.slice(0, 4).concat(['olive oil']),
+      steps: [
+        'Bring whatever meat/protein you have to room temp; pat dry.',
+        'Get a pan screaming hot, ' + cap(verb(items[0] || 'chicken')) + '.',
+        'Build the base: ' + rnd(['slice an onion', 'grate some garlic', 'toss in a handful of greens', 'char a pepper']) + ', season as you go.',
+        'Deglaze with ' + rnd(['a splash of vinegar', 'a little water + soy', 'the juice of half a lemon', 'a hit of sriracha']) + ' and scrape the good bits up.',
+        'Finish with ' + rnd(['butter', 'a pinch of chili flakes', 'chopped herbs', 'a spoon of mustard']) + ' and plate it like you mean it.'
+      ],
+      tip: 'Salt discipline is 80% of the chef thing — season every layer, not just the top.'
+    };
+
+    var pantryStaples = pickPantry(items, 'grain', 1).concat(pickPantry(items, 'herb', 1));
+    var pantry = {
+      title: toTitle(items[0] || 'Fridge') + ' "Skillet Scramble"',
+      tagline: 'Add two shelf staples and it becomes a whole dinner.',
+      time: '20 mins',
+      ingredients: items.slice(0, 4).concat(pantryStaples),
+      staples: pantryStaples.length ? pantryStaples : ['a can of chickpeas', 'a block of tofu'],
+      steps: [
+        'Start with the base: gently ' + cap(verb(items[0] || 'onion')) + ' in oil until soft.',
+        'Toss in the rest of the fridge odds (' + items.slice(1, 4).map(cap).join(', ') + ').',
+        'Add the pantry staples (' + pantryStaples.join(', ') + ') so it feels like a real dinner, not a science project.',
+        'Cover and let it steam-fry 8 minutes so everything melds into each other.',
+        'Serve with ' + rnd(['chili crisp', 'tahini', 'a fried egg', 'pickles', 'a big wedge of lime']) + '.'
+      ],
+      tip: 'One well-stocked pantry turn-scratch into a recipe you can actually repeat.'
+    };
+
+    return { quick: quick, chef: chef, pantry: pantry };
+  };
 
   // ── DOM refs ──
   var idleView   = document.getElementById('idleView');
@@ -535,63 +680,14 @@
     hideError();
     setView('loading');
 
-    var systemPrompt = [
-      'You are KitchenGhost — a brilliant kitchen alchemist. Given a messy list of ingredients, you create exactly 3 distinct meal ideas.',
-      '',
-      'Respond ONLY with valid JSON (no markdown, no backticks) matching this schema:',
-      '{',
-      '  "quick": {',
-      '    "title": "string",',
-      '    "tagline": "string (≤12 words, witty)",',
-      '    "time": "string e.g. \'8 mins\'",',
-      '    "ingredients": ["string", ...],',
-      '    "steps": ["string", ...],',
-      '    "tip": "string (1 clever tip)"',
-      '  },',
-      '  "chef": { same structure },',
-      '  "pantry": {',
-      '    same structure plus:',
-      '    "staples": ["1-2 items to buy"]',
-      '  }',
-      '}',
-      '',
-      'Rules:',
-      '- quick: Under 10 minutes, minimal effort, no fancy technique',
-      '- chef: Creative use of scraps, restaurant-worthy result, max 25 mins',
-      '- pantry: Adds 1-2 pantry staples to make it feel like a full satisfying meal',
-      '- steps: 3-5 clear steps each',
-      '- ingredients: only the ones actually used from the input (+ staples for pantry)',
-      '- Be specific, bold, slightly irreverent in tone'
-    ].join('\n');
-
-    fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: 'My ingredients: ' + input.value }]
-      })
-    })
-    .then(function (res) { return res.json(); })
-    .then(function (data) {
-      var content = data && data.content;
-      var raw = '';
-      if (Array.isArray(content)) {
-        for (var i = 0; i < content.length; i++) {
-          if (content[i].type === 'text') { raw = content[i].text; break; }
-        }
-      }
-      var clean = raw.replace(/```json|```/g, '').trim();
-      recipes = JSON.parse(clean);
+    // Build a recipe using a real (but local, keyless) generator.
+    // The engine runs entirely in the browser — no servers, no API keys.
+    setTimeout(function () {
+      var maker = new RecipeMaker();
+      recipes = maker.make(input.value);
       renderResults();
       setView('results');
-    })
-    .catch(function () {
-      showError('The alchemy failed. Check your ingredients and try again.');
-      setView('idle');
-    });
+    }, 700);
   }
 
   function renderResults() {

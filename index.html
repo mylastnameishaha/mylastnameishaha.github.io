@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- ======================================================================
+       TRAVIS ROUNTREE - JUNIOR WEB DESIGNER PORTFOLIO
+       Single file. No frameworks. Vanilla HTML, CSS, and JavaScript.
+
+       To personalize, search this file for "REPLACE" - each tag marks a spot
+       (email, links, resume path, project images).
+       ====================================================================== -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+        content="Travis Rountree - Junior Web Designer & UI Enthusiast. Design student graduating Fall 2027, building clean interfaces and learning with every project. Open to Summer 2027 internships.">
+  <meta name="theme-color" content="#fbfaf7">
+
+  <title>Travis Rountree - Junior Web Designer</title>
+
+  <!-- Fonts: DM Sans (headings) + Inter (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- "TR" monogram favicon (inline SVG data URI) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23ff6b5e'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='14' font-weight='700' fill='%23ffffff' text-anchor='middle'%3ETR%3C/text%3E%3C/svg%3E">
+
+  <style>
+    /* ======================================================================
+       1. DESIGN TOKENS
+       Every color and spacing value lives here. Edit one line to retheme.
+       ====================================================================== */
+    :root {
+      /* Palette - soft warm paper, high-contrast ink, coral accent */
+      --bg:          #fbfaf7;
+      --bg-alt:      #f4f1ea;
+      --surface:     #ffffff;
+      --surface-2:   #efece5;
+
+      --text:        #23272f;
+      --text-muted:  #5f6470;
+      --text-soft:   #8b919e;
+
+      --border:      #e8e3d9;
+
+      --accent:      #ff6b5e;
+      --accent-ink:  #d64a3e;      /* darker coral for text on light bg */
+      --accent-soft: #ffe8e4;
+
+      --ring:        #2563eb;      /* keyboard focus ring */
+
+      /* Spacing scale */
+      --space-1: 4px;  --space-2: 8px; --space-3: 12px;
+      --space-4: 16px; --space-5: 24px; --space-6: 32px;
+      --space-7: 48px; --space-8: 64px; --space-9: 96px;
+
+      /* Layout + shape + motion */
+      --nav-h:    72px;
+      --container: 1080px;
+      --radius-sm: 9px;
+      --radius:    14px;
+      --radius-lg: 22px;
+      --shadow:    0 1px 2px rgba(35,39,47,.06), 0 12px 32px -16px rgba(35,39,47,.22);
+      --ease:      cubic-bezier(.2,.7,.3,1);
+
+      /* Fonts */
+      --font-head: "DM Sans", system-ui, sans-serif;
+      --font-body: "Inter", system-ui, sans-serif;
+    }
+
+    /* ======================================================================
+       2. RESET & BASE
+       ====================================================================== */
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: calc(var(--nav-h) + 14px); /* clears sticky nav */
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 1.05rem;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    img { max-width: 100%; display: block; }
+    button { font: inherit; background: none; border: none; cursor: pointer; }
+    a { color: inherit; }
+
+    h1, h2, h3 {
+      font-family: var(--font-head);
+      line-height: 1.12;
+      letter-spacing: -.02em;
+      text-wrap: balance;
+    }
+
+    /* Respect motion preferences everywhere at once */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+
+    /* ======================================================================
+       3. ACCESSIBILITY - focus rings, skip link, sr-only
+       ====================================================================== */
+    :focus-visible {
+      outline: 3px solid var(--ring);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    .skip-link {
+      position: fixed;
+      top: -60px; left: 16px;
+      z-index: 200;
+      padding: 10px 20px;
+      background: var(--text);
+      color: #fff;
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: .95rem;
+      border-radius: var(--radius-sm);
+      transition: top .2s var(--ease);
+    }
+    .skip-link:focus { top: 16px; }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      margin: -1px; padding: 0; overflow: hidden;
+      clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+
+    /* ======================================================================
+       4. LAYOUT PRIMITIVES
+       ====================================================================== */
+    .container {
+      width: 100%;
+      max-width: var(--container);
+      margin-inline: auto;
+      padding-inline: var(--space-4);
+    }
+    @media (min-width: 768px)  { .container { padding-inline: var(--space-6); } }
+    @media (min-width: 1024px) { .container { padding-inline: var(--space-8); } }
+    @media (min-width: 1440px) { .container { max-width: 1200px; } }
+
+    .section { padding-block: clamp(64px, 10vw, 112px); }
+    .section-alt { background: var(--bg-alt); }
+    .center { text-align: center; }
+    .center .section-sub { margin-inline: auto; }
+
+    /* Eyebrow tag + shared section heading styles */
+    .eyebrow {
+      display: inline-block;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: .78rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      margin-bottom: var(--space-2);
+    }
+
+    .section-title {
+      font-size: clamp(1.9rem, 4.5vw, 2.7rem);
+      font-weight: 700;
+      margin-bottom: var(--space-4);
+    }
+
+    .section-sub { font-size: clamp(1rem, 1.6vw, 1.13rem); color: var(--text-muted); max-width: 56ch; }
+
+    /* Title left + supporting copy right (for For-About/Work/Learning headers) */
+    @media (min-width: 768px) {
+      .section-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-6);
+        margin-bottom: var(--space-7);
+      }
+      .section-head .section-title { margin-bottom: 0; }
+      .section-head .section-sub { margin-bottom: 6px; }
+    }
+
+    /* ======================================================================
+       5. BUTTONS
+       ====================================================================== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: 13px 24px;
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: .97rem;
+      text-decoration: none;
+      border-radius: 999px;
+      border: 2px solid var(--text);
+      background: var(--text);
+      color: #fff;
+      transition: transform .18s var(--ease), box-shadow .18s var(--ease),
+                  background .18s, color .18s, border-color .18s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); border-color: var(--accent); box-shadow: 0 10px 22px -10px rgba(255,107,94,.75); }
+    .btn-primary:hover { box-shadow: 0 16px 30px -10px rgba(255,107,94,.85); }
+    .btn-ghost { background: transparent; color: var(--text); }
+    .btn-ghost:hover { background: var(--text); color: #fff; }
+    @media (prefers-reduced-motion: no-preference) {
+      .btn:hover, .btn:focus-visible { transform: translateY(-2px); }
+    }
+
+    /* ======================================================================
+       6. STICKY NAV
+       ====================================================================== */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow .25s var(--ease);
+    }
+    .site-header.is-scrolled { box-shadow: var(--shadow); }
+
+    .nav {
+      height: var(--nav-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    /* Logo: coral "TR" mark + wordmark */
+    .logo {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 1.12rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-mark {
+      width: 38px; height: 38px;
+      border-radius: 11px;
+      background: var(--accent);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: .95rem;
+      transition: transform .2s var(--ease);
+    }
+    .logo:hover .logo-mark { transform: rotate(-8deg) scale(1.06); }
+
+    .nav-links {
+      display: none;
+      list-style: none;
+      gap: var(--space-5);
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: .95rem;
+    }
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-muted);
+      padding: var(--space-2) 2px;
+      position: relative;
+      transition: color .18s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); }
+    /* Underline sweep */
+    .nav-links a::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 100%;
+      bottom: 2px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--accent);
+      transition: right .22s var(--ease);
+    }
+    .nav-links a:hover::after, .nav-links a.active::after { right: 0; }
+
+    /* Desktop "Hire Me" CTA */
+    .nav-cta {
+      display: none;
+      padding: 9px 20px;
+      font-size: .9rem;
+      border-width: 2px;
+    }
+    .nav-cta.btn-primary:hover { transform: translateY(-1px); }
+
+    /* Hamburger (mobile only). The .bar lines are absolute-positioned, so
+       the toggle itself must be a positioning context. */
+    .nav-toggle {
+      position: relative;
+      width: 42px; height: 42px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-toggle:hover { background: var(--surface); }
+    .nav-toggle .bar {
+      position: absolute;
+      width: 18px; height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform .25s var(--ease), opacity .2s var(--ease);
+    }
+    .nav-toggle [data-dir="up"]   { transform: translateY(-5px); }
+    .nav-toggle [data-dir="down"] { transform: translateY(5px); }
+    /* Open state morphs the three lines into an X */
+    .nav-toggle[aria-expanded="true"] [data-dir="up"]   { transform: translateY(1px) rotate(45deg); }
+    .nav-toggle[aria-expanded="true"] [data-dir="mid"]  { opacity: 0; }
+    .nav-toggle[aria-expanded="true"] [data-dir="down"] { transform: translateY(-1px) rotate(-45deg); }
+
+    /* Mobile slide-down panel */
+    .mobile-menu {
+      position: absolute;
+      top: var(--nav-h);
+      left: 0; right: 0;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: var(--space-2) var(--space-4) var(--space-5);
+      animation: menu-in .22s var(--ease);
+    }
+    .mobile-menu[hidden] { display: none; }
+    @keyframes menu-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .mobile-menu ul { list-style: none; display: flex; flex-direction: column; }
+    .mobile-menu a {
+      display: block;
+      padding: var(--space-3) var(--space-2);
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: 1.02rem;
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+    }
+    .mobile-menu a:hover { background: var(--surface); }
+    .mobile-menu .btn { margin-top: var(--space-3); width: 100%; }
+
+    @media (min-width: 1024px) {
+      .nav-links { display: flex; }
+      .nav-cta  { display: inline-flex; }
+      .nav-toggle { display: none; }
+    }
+
+    /* ======================================================================
+       7. HERO
+       ====================================================================== */
+    .hero {
+      position: relative;
+      padding: clamp(64px, 9vw, 108px) 0 clamp(52px, 7vw, 84px);
+      overflow: hidden;
+    }
+    /* Soft coral glow behind the hero (decorative) */
+    .hero::before {
+      content: "";
+      position: absolute;
+      width: 560px; height: 560px;
+      right: -180px; top: -160px;
+      background: radial-gradient(circle, rgba(255,107,94,.14), transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      gap: var(--space-6);
+      align-items: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--accent-soft);
+      color: var(--accent-ink);
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: .86rem;
+      padding: 7px 14px;
+      border-radius: 999px;
+    }
+    .hero-eyebrow .pulse-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .hero-eyebrow .pulse-dot { animation: pulse 2.4s infinite; }
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,94,.5); }
+      55%       { box-shadow: 0 0 0 7px rgba(255,107,94,0); }
+    }
+
+    .hero-title { margin-top: var(--space-4); font-size: clamp(2.3rem, 6.5vw, 3.9rem); font-weight: 700; }
+    .hero-title .accent { color: var(--accent-ink); }
+
+    .hero-sub { margin-top: var(--space-4); font-size: clamp(1.04rem, 1.7vw, 1.18rem); color: var(--text-muted); max-width: 52ch; }
+
+    .hero-actions { margin-top: var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-3); }
+
+    .hero-meta { margin-top: var(--space-5); font-size: .95rem; color: var(--text-soft); }
+
+    /* Illustrated avatar */
+    .avatar-wrap {
+      display: flex;
+      justify-content: flex-start;
+      max-width: 300px;
+      margin-top: var(--space-2);
+    }
+    .avatar-wrap svg {
+      width: 100%;
+      height: auto;
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      transform: rotate(-1.5deg);
+      transition: transform .3s var(--ease);
+    }
+    .avatar-wrap:hover svg { transform: rotate(0deg) translateY(-4px); }
+
+    @media (min-width: 768px) {
+      .hero-grid {
+        grid-template-columns: 1fr 300px;
+        gap: var(--space-7);
+      }
+      .avatar-wrap { justify-self: end; margin-top: 0; }
+    }
+
+    /* ======================================================================
+       8. ABOUT
+       ====================================================================== */
+    .about-text { max-width: 64ch; color: var(--text-muted); margin-bottom: var(--space-6); }
+    .about-text strong { color: var(--text); }
+
+    .edu-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      max-width: 700px;
+    }
+    .edu-card h3 { font-size: 1.12rem; margin-bottom: var(--space-1); }
+    .edu-sub { color: var(--text-muted); margin-bottom: var(--space-4); }
+    .edu-sub strong { color: var(--text); }
+    .edu-label { color: var(--text-soft); font-size: .9rem; margin-bottom: var(--space-3); }
+
+    /* ======================================================================
+       9. WORK + FILTER
+       ====================================================================== */
+    .filter-zone {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-4) var(--space-5);
+      margin-bottom: var(--space-6);
+    }
+    .filter-label { font-family: var(--font-head); font-weight: 600; font-size: .9rem; color: var(--text-muted); }
+
+    .filter-bar { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+    /* Chip shared styles */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: .88rem;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      transition: background .18s var(--ease), color .18s, border-color .18s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--text); }
+    .chip[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: #fff; }
+
+    .project-grid { display: grid; gap: var(--space-5); }
+    @media (min-width: 768px) { .project-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    .project-card:hover { transform: translateY(-5px); box-shadow: var(--shadow); }
+    .project-card.is-hidden { display: none; }
+
+    /* Thumbnail block - generated SVG placeholder covers, swapped later */
+    .thumb { position: relative; aspect-ratio: 16 / 9; background: var(--surface-2); overflow: hidden; }
+    .thumb > svg { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform .4s var(--ease); }
+    .project-card:hover .thumb > svg { transform: scale(1.045); }
+
+    .project-body { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); flex: 1; }
+
+    .card-label {
+      align-self: flex-start;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: .72rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      background: var(--accent-soft);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .card-title { font-size: 1.26rem; font-weight: 700; }
+    .tools { font-size: .88rem; color: var(--text-soft); }
+    .card-desc { font-size: .97rem; color: var(--text-muted); }
+
+    .card-link {
+      margin-top: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      width: fit-content;
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: .94rem;
+      color: var(--accent-ink);
+      text-decoration: none;
+    }
+    .card-link .arr { transition: transform .18s var(--ease); }
+    .card-link:hover .arr { transform: translateX(4px); }
+
+    .no-results {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: var(--space-7) var(--space-4);
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .no-results[hidden] { display: none; }
+
+    /* ======================================================================
+       10. SKILLS (three columns)
+       ====================================================================== */
+    .skill-grid { display: grid; gap: var(--space-5); margin-top: var(--space-7); }
+    @media (min-width: 768px) { .skill-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .skill-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6) var(--space-5);
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .skill-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+    }
+    .skill-card h3 { font-size: 1.12rem; margin-bottom: var(--space-4); }
+    .skill-card h3 .mini {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      margin-right: 10px;
+      font-size: .95rem;
+      background: var(--accent-soft);
+      color: var(--accent-ink);
+    }
+
+    .slist { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      display: inline-block;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 7px 13px;
+      font-size: .88rem;
+      border-radius: 999px;
+      transition: border-color .16s var(--ease), color .16s;
+    }
+    .skill-card .tag:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ======================================================================
+       11. PROCESS
+       ====================================================================== */
+    .process-grid { display: grid; gap: var(--space-4); margin-top: var(--space-7); }
+    @media (min-width: 768px) { .process-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      position: relative;
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .step:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px; height: 44px;
+      border-radius: 14px;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #fff;
+      background: var(--accent);
+      margin-bottom: var(--space-4);
+    }
+    .step h3 { font-size: 1.08rem; margin-bottom: var(--space-2); }
+    .step p { font-size: .93rem; color: var(--text-muted); }
+    /* Dashed connector between steps on wide screens */
+    @media (min-width: 1024px) {
+      .step:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: -18px;
+        width: 26px;
+        height: 2px;
+        background: repeating-linear-gradient(90deg, var(--border) 0 6px, transparent 6px 10px);
+        transform: translateY(-50%);
+      }
+    }
+
+    /* ======================================================================
+       12. CURRENTLY LEARNING
+       ====================================================================== */
+    .learning-list { list-style: none; display: grid; gap: var(--space-3); max-width: 780px; }
+    .learning-list li {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-4);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-4) var(--space-5);
+      transition: transform .22s var(--ease), border-color .22s;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .learning-list li:hover { transform: translateX(4px); border-color: var(--accent); }
+    }
+    .learn-name { font-family: var(--font-head); font-weight: 600; font-size: 1rem; }
+    .learn-label {
+      font-family: var(--font-body);
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      white-space: nowrap;
+      margin-top: 3px;
+    }
+    .learn-tip {
+      display: inline-block;
+      margin-top: var(--space-5);
+      font-size: .88rem;
+      color: var(--text-soft);
+      border-left: 3px solid var(--accent);
+      padding-left: var(--space-3);
+    }
+
+    /* ======================================================================
+       13. CONTACT (full-bleed dark) + FOOTER
+       ====================================================================== */
+    .contact-section { background: var(--text); color: #e9ecf2; padding-top: clamp(64px, 8vw, 96px); }
+    .contact-section .eyebrow { color: #ffb2a8; }
+    .contact-title { color: #fff; }
+    .contact-blurb { color: #b9becb; max-width: 46ch; }
+    .contact-blurb a { color: #fff; font-weight: 600; }
+
+    .contact-grid { display: grid; gap: var(--space-7); margin-top: var(--space-6); }
+    @media (min-width: 900px) {
+      .contact-grid { grid-template-columns: 1fr 400px; gap: var(--space-8); align-items: start; }
+    }
+
+    .contact-links { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
+    .contact-links .btn {
+      background: transparent;
+      border-color: rgba(255,255,255,.35);
+      color: #fff;
+    }
+    .contact-links .btn:hover { border-color: var(--accent); color: #ffb2a8; }
+
+    .contact-form { display: grid; gap: var(--space-4); }
+    .field { display: grid; gap: 6px; }
+    .field label { font-family: var(--font-head); font-weight: 600; font-size: .9rem; color: #dfe3ec; }
+    .field label .req { color: #ffb2a8; }
+    .field input, .field textarea {
+      font: inherit;
+      color: #fff;
+      background: rgba(255,255,255,.08);
+      border: 1.5px solid rgba(255,255,255,.22);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      transition: border-color .18s, background .18s;
+    }
+    .field input::placeholder, .field textarea::placeholder { color: #878d9c; }
+    .field input:focus, .field textarea:focus { outline: none; border-color: #ffb2a8; background: rgba(255,255,255,.13); }
+    .field input[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: #ff6b6b; }
+    .error-msg { display: none; font-size: .85rem; color: #ff9d95; }
+    .field.invalid .error-msg { display: block; animation: err-in .18s ease; }
+    @keyframes err-in {
+      from { transform: translateY(-3px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+    .contact-form .btn-primary { margin-top: var(--space-2); justify-self: start; background: var(--accent); border-color: var(--accent); }
+
+    .form-fallback { display: none; margin-top: var(--space-3); font-size: .87rem; color: #878d9c; }
+    .form-fallback.is-active { display: block; animation: err-in .2s ease; }
+    .form-fallback a { color: #fff; }
+
+    .footer { background: var(--text); color: #8a90a0; padding: var(--space-2) 0 var(--space-6); }
+    .footer-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: .92rem; }
+    .footer-links { list-style: none; display: flex; gap: var(--space-4); }
+    .footer-links a { color: #b9becb; text-decoration: none; }
+    .footer-links a:hover { color: #fff; }
+    .footer .heart { color: var(--accent); }
+
+    /* ======================================================================
+       14. TINY SCREENS (<= 480px)
+       ====================================================================== */
+    @media (max-width: 480px) {
+      .hero-actions .btn { flex: 1 1 auto; justify-content: center; }
+      .filter-zone { align-items: flex-start; flex-direction: column; }
+      .section-head { margin-bottom: var(--space-6); }
+      .learning-list li { flex-direction: column; gap: var(--space-2); }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Skip link for keyboard users -->
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ======================================================================
+       STICKY NAV
+       ====================================================================== -->
+  <header class="site-header">
+    <div class="container nav">
+      <a class="logo" href="#hero">
+        <span class="logo-mark" aria-hidden="true">TR</span>
+        <span class="sr-only">Travis Rountree, back to top</span>
+        <span>Travis Rountree</span>
+      </a>
+
+      <nav aria-label="Primary">
+        <ul class="nav-links">
+          <li><a href="#about">About</a></li>
+          <li><a href="#work">Work</a></li>
+          <li><a href="#skills">Skills</a></li>
+          <li><a href="#process">Process</a></li>
+          <li><a href="#learning">Learning</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+
+      <a class="nav-cta btn btn-primary" href="#contact">Hire Me</a>
+
+      <!-- Hamburger -->
+      <button class="nav-toggle" type="button"
+              aria-label="Toggle navigation menu"
+              aria-controls="mobile-menu"
+              aria-expanded="false">
+        <span aria-hidden="true" class="bar" data-dir="up"></span>
+        <span aria-hidden="true" class="bar" data-dir="mid"></span>
+        <span aria-hidden="true" class="bar" data-dir="down"></span>
+      </button>
+    </div>
+
+    <!-- Mobile slide-down menu -->
+    <div class="mobile-menu" id="mobile-menu" hidden>
+      <ul>
+        <li><a href="#about">About</a></li>
+        <li><a href="#work">Work</a></li>
+        <li><a href="#skills">Skills</a></li>
+        <li><a href="#process">Process</a></li>
+        <li><a href="#learning">Learning</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a class="btn btn-primary" href="#contact">Hire Me</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ======================================================================
+         HERO
+         ====================================================================== -->
+    <section id="hero" class="hero" aria-labelledby="hero-title">
+      <div class="container hero-grid">
+
+        <div class="hero-copy">
+          <span class="hero-eyebrow">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            Open to Summer 2027 internships
+          </span>
+          <h1 id="hero-title" class="hero-title">Hi, I'm Travis. I design <span class="accent">user-friendly websites</span>.</h1>
+          <p class="hero-sub">Design student graduating Fall 2027, building clean interfaces and learning something new with every project.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#work">View My Work</a>
+            <a class="btn btn-ghost" href="Resume-Travis-Rountree.pdf" download>Download Resume</a>
+          </div>
+          <p class="hero-meta">Based in Berlin, MD</p>
+        </div>
+
+        <!-- Headshot placeholder (illustrated SVG). Add a real <img>, then
+             replace the .thumb/avatar markup so the image takes its place. -->
+        <div class="avatar-wrap" id="avatar-slot"></div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ABOUT ME
+         ====================================================================== -->
+    <section id="about" class="section" aria-labelledby="about-title">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">About me</span>
+            <h2 id="about-title" class="section-title">Turning curiosity into craft.</h2>
+          </div>
+          <p class="section-sub">Good design solves real problems - that's the idea I keep on my desk and bring to every project.</p>
+        </div>
+
+        <div class="about-grid">
+          <p class="about-text">
+            I'm a design student based in Berlin, MD, working toward my degree with an expected graduation of <strong>Fall 2027</strong>.
+            I care about the quiet details: spacing that makes a page feel calm, microcopy that keeps people from guessing, and hierarchy that tells
+            them where to look first. Right now I'm learning to pair that design thinking with real front-end code - so I can build what I draw.
+          </p>
+
+          <!-- Education block -->
+          <div class="edu-card">
+            <h3>University of Maryland Global Campus</h3>
+            <p class="edu-sub">B.A. in Design, expected graduation <strong>Fall 2027</strong></p>
+            <p class="edu-label" id="edu-label">Relevant coursework</p>
+            <ul class="slist" aria-labelledby="edu-label">
+              <li><span class="tag">Interaction Design</span></li>
+              <li><span class="tag">Visual Communication</span></li>
+              <li><span class="tag">Web Design</span></li>
+              <li><span class="tag">Typography</span></li>
+              <li><span class="tag">UX Research Basics</span></li>
+              <li><span class="tag">Design Systems</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SELECTED WORK
+         ====================================================================== -->
+    <section id="work" class="section section-alt" aria-labelledby="work-title">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Selected work</span>
+            <h2 id="work-title" class="section-title">Things I've made and learned from.</h2>
+          </div>
+          <p class="section-sub">A mix of class projects, personal experiments, and redesigns. Every one taught me something I still use.</p>
+        </div>
+
+        <!-- Filter chips -->
+        <div class="filter-zone">
+          <span class="filter-label" id="work-filter-label">Filter:</span>
+          <div class="filter-bar" role="group" aria-labelledby="work-filter-label">
+            <button class="chip" type="button" data-filter="all"       aria-pressed="true">All</button>
+            <button class="chip" type="button" data-filter="classwork" aria-pressed="false">Classwork</button>
+            <button class="chip" type="button" data-filter="personal"  aria-pressed="false">Personal</button>
+            <button class="chip" type="button" data-filter="redesign"  aria-pressed="false">Redesigns</button>
+          </div>
+        </div>
+
+        <div class="project-grid" id="project-grid">
+
+          <article class="project-card" data-category="classwork">
+            <div class="thumb" data-shot="usps"></div>
+            <div class="project-body">
+              <span class="card-label">Classwork</span>
+              <h3 class="card-title">USPS App Redesign</h3>
+              <p class="tools">Figma - Prototyping</p>
+              <p class="card-desc">Tracking a package should take two taps. I cut a cluttered 4-step flow down to 2 and validated the new path with classmates before building the high-fi screens.</p>
+              <a class="card-link" href="#contact">Case Study <span class="arr" aria-hidden="true">&rarr;</span></a>
+            </div>
+          </article>
+
+          <article class="project-card" data-category="personal">
+            <div class="thumb" data-shot="vault"></div>
+            <div class="project-body">
+              <span class="card-label">Personal</span>
+              <h3 class="card-title">Gym Recipe Vault</h3>
+              <p class="tools">Figma - HTML - CSS</p>
+              <p class="card-desc">Every time I cooked something good, the recipe disappeared into a Google Doc. So I designed a clean way to search, tag, and save meals - and learned a ton about card-based layouts.</p>
+              <a class="card-link" href="#contact">Case Study <span class="arr" aria-hidden="true">&rarr;</span></a>
+            </div>
+          </article>
+
+          <article class="project-card" data-category="redesign">
+            <div class="thumb" data-shot="farm"></div>
+            <div class="project-body">
+              <span class="card-label">Redesign</span>
+              <h3 class="card-title">Farmers Market Site</h3>
+              <p class="tools">Figma - HTML - CSS</p>
+              <p class="card-desc">A community stall needed a clearer way to show which vendors show up each week. I rebuilt the vendor board around a simple, scannable layout and practiced designing for a real client.</p>
+              <a class="card-link" href="#contact">Case Study <span class="arr" aria-hidden="true">&rarr;</span></a>
+            </div>
+          </article>
+
+          <article class="project-card" data-category="classwork">
+            <div class="thumb" data-shot="drops"></div>
+            <div class="project-body">
+              <span class="card-label">Classwork</span>
+              <h3 class="card-title">Music Collection - "Needle Drops"</h3>
+              <p class="tools">Figma - InVision</p>
+              <p class="card-desc">A passion-project store design for rare vinyl. This is where I ran my first user interviews - and completely reorganized the navigation because of what I heard.</p>
+              <a class="card-link" href="#contact">Case Study <span class="arr" aria-hidden="true">&rarr;</span></a>
+            </div>
+          </article>
+
+        </div>
+
+        <p class="no-results" hidden>
+          That category is a bit empty for now - it's on the build list. Try a different filter?
+        </p>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SKILLS & TOOLS
+         ====================================================================== -->
+    <section id="skills" class="section" aria-labelledby="skills-title">
+      <div class="container">
+        <div class="center">
+          <span class="eyebrow">Skills &amp; tools</span>
+          <h2 id="skills-title" class="section-title">Comfortable with the basics, hungry for the rest.</h2>
+          <p class="section-sub">Confident in the fundamentals below - the list keeps growing.</p>
+        </div>
+
+        <div class="skill-grid">
+          <article class="skill-card">
+            <h3><span class="mini" aria-hidden="true">D</span>Design</h3>
+            <ul class="slist" aria-label="Design skills">
+              <li><span class="tag">Figma</span></li>
+              <li><span class="tag">Wireframing</span></li>
+              <li><span class="tag">Prototyping</span></li>
+              <li><span class="tag">Typography</span></li>
+              <li><span class="tag">Color Theory</span></li>
+              <li><span class="tag">Usability Heuristics</span></li>
+            </ul>
+          </article>
+
+          <article class="skill-card">
+            <h3><span class="mini" aria-hidden="true">C</span>Code</h3>
+            <ul class="slist" aria-label="Coding skills">
+              <li><span class="tag">HTML5</span></li>
+              <li><span class="tag">CSS3</span></li>
+              <li><span class="tag">JavaScript (basics)</span></li>
+              <li><span class="tag">Responsive Design</span></li>
+              <li><span class="tag">Git &amp; GitHub</span></li>
+            </ul>
+          </article>
+
+          <article class="skill-card">
+            <h3><span class="mini" aria-hidden="true">S</span>Soft Skills</h3>
+            <ul class="slist" aria-label="Soft skills">
+              <li><span class="tag">Communication</span></li>
+              <li><span class="tag">Adaptability</span></li>
+              <li><span class="tag">Feedback-Friendly</span></li>
+              <li><span class="tag">Time Management</span></li>
+              <li><span class="tag">Collaboration</span></li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         PROCESS
+         ====================================================================== -->
+    <section id="process" class="section section-alt" aria-labelledby="process-title">
+      <div class="container">
+        <div class="center">
+          <span class="eyebrow">My process</span>
+          <h2 id="process-title" class="section-title">Design is a loop, not a line.</h2>
+          <p class="section-sub">Four steps I return to on almost every project.</p>
+        </div>
+
+        <div class="process-grid">
+          <article class="step">
+            <span class="step-num" aria-hidden="true">1</span>
+            <h3>Research</h3>
+            <p>I start by asking who this is for and what's actually breaking - assumptions don't survive here.</p>
+          </article>
+          <article class="step">
+            <span class="step-num" aria-hidden="true">2</span>
+            <h3>Sketch</h3>
+            <p>Fast, low-fi, and ugly on purpose. Sketching lets me try ten directions without falling in love with one.</p>
+          </article>
+          <article class="step">
+            <span class="step-num" aria-hidden="true">3</span>
+            <h3>Design</h3>
+            <p>In Figma I turn the winning idea into real screens with honest typography, spacing, and reusable components.</p>
+          </article>
+          <article class="step">
+            <span class="step-num" aria-hidden="true">4</span>
+            <h3>Test</h3>
+            <p>Putting work in front of real people is where I learn the most - I iterate, ship, then start the loop again.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         CURRENTLY LEARNING
+         ====================================================================== -->
+    <section id="learning" class="section" aria-labelledby="learning-title">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Currently learning</span>
+            <h2 id="learning-title" class="section-title">What's on my desk right now.</h2>
+          </div>
+          <p class="section-sub">I'd rather show you a work-in-progress than a finished list. Here's what I'm studying this semester.</p>
+        </div>
+
+        <ul class="learning-list">
+          <li>
+            <span class="learn-name">UX Research Methods</span>
+            <span class="learn-label">In my course</span>
+          </li>
+          <li>
+            <span class="learn-name">Advanced Figma Components and Design Tokens</span>
+            <span class="learn-label">In my course</span>
+          </li>
+          <li>
+            <span class="learn-name">Introduction to JavaScript</span>
+            <span class="learn-label">Self-taught</span>
+          </li>
+          <li>
+            <span class="learn-name">Accessibility deep-dive (WCAG 2.2)</span>
+            <span class="learn-label">Self-taught</span>
+          </li>
+        </ul>
+
+        <p class="learn-tip">Pro tip from a student: post your process notes on LinkedIn too - recruiters notice the run, not just the finish line.</p>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         CONTACT + FOOTER
+         ====================================================================== -->
+    <section id="contact" class="contact-section" aria-labelledby="contact-title">
+      <div class="container">
+        <div class="contact-grid">
+          <div>
+            <span class="eyebrow">Contact</span>
+            <h2 id="contact-title" class="section-title contact-title">Let's make something. Or test something together.</h2>
+            <p class="contact-blurb">
+              Open to internships, freelance side projects, and coffee chats. Say hi at
+              <a href="mailto:travisrountree@outlook.com">travisrountree@outlook.com</a>, or use the form - I usually reply within 24 hours.
+            </p>
+
+            <ul class="contact-links" aria-label="Social links">
+              <li><a class="btn" href="https://github.com/mylastnameishaha" target="_blank" rel="noopener">GitHub</a></li>
+              <li><a class="btn" href="https://www.behance.net/travisrountree" target="_blank" rel="noopener">Behance</a></li>
+              <li><a class="btn" href="https://www.linkedin.com/in/travis-rountree/" target="_blank" rel="noopener">LinkedIn</a></li>
+            </ul>
+          </div>
+
+          <!-- Contact form: JS validates, then opens a prefilled mailto. -->
+          <form class="contact-form" novalidate>
+            <div class="field" data-field="name">
+              <label for="cf-name">Name <span class="req" aria-hidden="true">*</span></label>
+              <input type="text" id="cf-name" name="name" placeholder="Jordan Smith" autocomplete="name" required>
+              <span class="error-msg" id="err-name" role="alert">Please add your name.</span>
+            </div>
+
+            <div class="field" data-field="email">
+              <label for="cf-email">Email <span class="req" aria-hidden="true">*</span></label>
+              <input type="email" id="cf-email" name="email" placeholder="you@example.com" autocomplete="email" required>
+              <span class="error-msg" id="err-email" role="alert">Please use a valid email, e.g. you@example.com.</span>
+            </div>
+
+            <div class="field" data-field="message">
+              <label for="cf-message">Message <span class="req" aria-hidden="true">*</span></label>
+              <textarea id="cf-message" name="message" rows="5" placeholder="Tell me about your project, internship, or the coffee shop you're timing me at." required></textarea>
+              <span class="error-msg" id="err-message" role="alert">A few words so I know it's on purpose?</span>
+            </div>
+
+            <button class="btn btn-primary" type="submit">Send Message</button>
+
+            <p class="form-fallback" role="status" id="form-fallback">
+              Your mail app should have opened. If not, email me directly at
+              <a href="mailto:travisrountree@outlook.com">travisrountree@outlook.com</a>.
+            </p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <p>Built with <span class="heart" aria-hidden="true">&hearts;</span> and HTML/CSS - &copy; 2026 Travis Rountree.</p>
+      <ul class="footer-links">
+        <li><a href="#hero">Back to top &uarr;</a></li>
+        <li><a href="#work">Work</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- ======================================================================
+       SCRIPT - vanilla JS, no dependencies
+       Powers: mobile menu, filter chips, SVG illustration placeholders,
+       scroll effects (nav shadow + active link), form validation.
+       ====================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      var SVGNS = 'http://www.w3.org/2000/svg';
+
+      /* Minimal SVG element factory: elNS('rect', {...attrs}, parent) */
+      function elNS(tag, attrs, parent) {
+        var node = document.createElementNS(SVGNS, tag);
+        for (var key in attrs) {
+          if (attrs.hasOwnProperty(key)) node.setAttribute(key, attrs[key]);
+        }
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      /* ====================================================================
+         1. MOBILE MENU
+         ==================================================================== */
+      var toggle = document.querySelector('.nav-toggle');
+      var menu   = document.getElementById('mobile-menu');
+
+      if (toggle && menu) {
+        toggle.addEventListener('click', function () {
+          var open = toggle.getAttribute('aria-expanded') === 'true';
+          toggle.setAttribute('aria-expanded', String(!open));
+          if (open) { menu.hidden = true; }
+          else      { menu.hidden = false; }
+        });
+
+        /* Close after tapping any link, then let the anchor scroll happen */
+        menu.addEventListener('click', function (e) {
+          if (e.target.closest('a')) {
+            toggle.setAttribute('aria-expanded', 'false');
+            menu.hidden = true;
+          }
+        });
+
+        /* Close on Escape, return focus to the button */
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && !menu.hidden) {
+            toggle.setAttribute('aria-expanded', 'false');
+            menu.hidden = true;
+            toggle.focus();
+          }
+        });
+      }
+
+      /* ====================================================================
+         2. PROJECT FILTER CHIPS
+         ==================================================================== */
+      var chips = document.querySelectorAll('.chip[data-filter]');
+      var cards = document.querySelectorAll('.project-card');
+      var noResults = document.querySelector('.no-results');
+
+      function applyFilter(filter) {
+        var visible = 0;
+        cards.forEach(function (card) {
+          var show = filter === 'all' || card.getAttribute('data-category') === filter;
+          card.classList.toggle('is-hidden', !show);
+          if (show) visible++;
+        });
+        if (noResults) noResults.hidden = visible !== 0;
+      }
+
+      chips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          var next = chip.getAttribute('data-filter');
+          chips.forEach(function (c) {
+            c.setAttribute('aria-pressed', String(c === chip));
+          });
+          applyFilter(next);
+        });
+      });
+
+      /* ====================================================================
+         3. ILLUSTRATED COVERS (placeholder thumbnails)
+         Each tile hand-draws a mini SVG "screenshot" so the grid looks
+         designed immediately. Swap <div class="thumb"> for real imagery.
+         ==================================================================== */
+      var INK   = '#23272f';
+      var CORAL = '#ff6b5e';
+      var MINT  = '#5cc8a5';
+      var BLUE  = '#5d8fd9';
+
+      var covers = {
+
+        /* USPS tracking app - map pin + progress steps */
+        usps: function (svg) {
+          elNS('rect', { width: 800, height: 450, fill: '#cfdae8' }, svg);
+          for (var i = 0; i < 7; i++) {
+            elNS('rect', { x: -40 + i * 125, y: 90 + (i % 3) * 40, width: 60, height: 10, rx: 5, fill: '#e3eafe' }, svg);
+          }
+          var card = elNS('rect', { x: 70, y: 66, width: 300, height: 318, rx: 22, fill: '#ffffff' }, svg);
+          // status bar
+          elNS('rect', { x: 92, y: 92, width: 40, height: 9, rx: 4, fill: '#d8deea' }, svg);
+          elNS('rect', { x: 150, y: 92, width: 130, height: 9, rx: 4, fill: '#edeff3' }, svg);
+          // mini map
+          elNS('rect', { x: 92, y: 120, width: 256, height: 120, rx: 10, fill: '#e9f2e4' }, svg);
+          elNS('rect', { x: 92, y: 170, width: 256, height: 7, rx: 3, fill: '#d6e4d0' }, svg);
+          elNS('rect', { x: 190, y: 120, width: 7, height: 120, rx: 3, fill: '#d6e4d0' }, svg);
+          // coral pin
+          elNS('circle', { cx: 175, cy: 175, r: 16, fill: CORAL }, svg);
+          elNS('circle', { cx: 175, cy: 175, r: 6, fill: '#ffffff' }, svg);
+          // package lines
+          elNS('rect', { x: 92, y: 262, width: 200, height: 9, rx: 4, fill: '#c9cfdb' }, svg);
+          elNS('rect', { x: 92, y: 278, width: 120, height: 7, rx: 3, fill: '#e5e8ee' }, svg);
+          // progress dots (2 done, 2 waiting)
+          [0, 1, 2, 3].forEach(function (n) {
+            var done = n < 2;
+            elNS('rect', { x: 92 + n * 62, y: 308, width: 24, height: 24, rx: 12, fill: done ? CORAL : '#e5e8ee' }, svg);
+            elNS('rect', { x: 92 + n * 62, y: 342, width: 24, height: 6, rx: 3, fill: done ? '#ffbdb5' : '#eff1f4' }, svg);
+          });
+
+          // side: "shipment" cards
+          [0, 1, 2].forEach(function (n) {
+            var x = 420, y = 66 + n * 108;
+            elNS('rect', { x: x, y: y, width: 310, height: 88, rx: 16, fill: n === 1 ? '#fff5f3' : '#ffffff' }, svg);
+            elNS('rect', { x: x + 18, y: y + 16, width: 34, height: 34, rx: 10, fill: n === 1 ? CORAL : '#eef0f4' }, svg);
+            elNS('rect', { x: x + 64, y: y + 18, width: 150, height: 9, rx: 4, fill: '#c9cfdb' }, svg);
+            elNS('rect', { x: x + 64, y: y + 36, width: 100, height: 7, rx: 3, fill: '#e5e8ee' }, svg);
+            elNS('circle', { cx: x + 280, cy: y + 33, r: 9, fill: n === 2 ? '#dfe4ec' : CORAL }, svg);
+          });
+        },
+
+        /* Recipe Vault - card grid of recipe tiles */
+        vault: function (svg) {
+          elNS('rect', { width: 800, height: 450, fill: '#f7f3ea' }, svg);
+          // header
+          elNS('rect', { x: 40, y: 40, width: 720, height: 56, rx: 16, fill: '#ffffff' }, svg);
+          elNS('rect', { x: 58, y: 58, width: 20, height: 20, rx: 6, fill: CORAL }, svg);
+          elNS('rect', { x: 92, y: 60, width: 130, height: 9, rx: 4, fill: '#d8d2c4' }, svg);
+          elNS('rect', { x: 610, y: 56, width: 128, height: 24, rx: 12, fill: '#f0ece0' }, svg);
+          elNS('circle', { cx: 630, cy: 68, r: 5, fill: '#c9c2b1' }, svg);
+
+          var tiles = ['#ffcec4', '#ffe0b8', '#d9e8cb', '#dde5f5', '#ffd9c2', '#e9ddf2'];
+          [0, 1, 2].forEach(function (row) {
+            [0, 1, 2].forEach(function (col) {
+              var x = 40 + col * 244;
+              var y = 116 + row * 104;
+              elNS('rect', { x: x, y: y, width: 224, height: 92, rx: 14, fill: '#ffffff' }, svg);
+              var tx = x + 14, ty = y + 14;
+              elNS('rect', { x: tx, y: ty, width: 60, height: 64, rx: 10, fill: tiles[col + row * 3] }, svg);
+              elNS('rect', { x: tx + 74, y: ty + 6, width: 120, height: 9, rx: 4, fill: '#c9c2b1' }, svg);
+              elNS('rect', { x: tx + 74, y: ty + 24, width: 92, height: 7, rx: 3, fill: '#e7e2d4' }, svg);
+              elNS('rect', { x: tx + 74, y: ty + 40, width: 56, height: 7, rx: 3, fill: '#f0ece0' }, svg);
+            });
+          });
+        },
+
+        /* Farmers Market - whimsical vendor tents */
+        farm: function (svg) {
+          elNS('rect', { width: 800, height: 450, fill: '#eef6ea' }, svg);
+          // sun + clouds stay abstract: soft horizon band
+          elNS('rect', { x: 0, y: 290, width: 800, height: 160, fill: '#dcecd5' }, svg);
+          [0, 1, 2, 3, 4, 5].forEach(function (i) {
+            var cx = 78 + i * 130, top = 120 + (i % 3) * 34;
+            // tree trunk + canopy
+            elNS('rect', { x: cx - 5, y: top + 30, width: 10, height: 140, fill: '#a4845f' }, svg);
+            elNS('circle', { cx: cx, cy: top, r: 26, fill: '#7fbe8c' }, svg);
+            elNS('circle', { cx: cx - 20, cy: top + 12, r: 18, fill: '#94cc9c' }, svg);
+            elNS('circle', { cx: cx + 20, cy: top + 12, r: 18, fill: '#94cc9c' }, svg);
+          });
+          // vendor cards along the bottom
+          [0, 1, 2, 3].forEach(function (i) {
+            var x = 46 + i * 184;
+            elNS('rect', { x: x, y: 300, width: 168, height: 110, rx: 14, fill: '#ffffff' }, svg);
+            var tentColor = [CORAL, MINT, BLUE, '#f2b34b'][i];
+            var tx = x + 20;
+            elNS('path', {
+              d: 'M' + tx + ' 382 L' + (tx + 26) + ' 352 L' + (tx + 52) + ' 382 Z',
+              fill: tentColor
+            }, svg);
+            elNS('rect', { x: tx + 72, y: 320, width: 72, height: 8, rx: 4, fill: '#c9c2b1' }, svg);
+            elNS('rect', { x: tx + 72, y: 340, width: 50, height: 6, rx: 3, fill: '#e7e2d4' }, svg);
+          });
+        },
+
+        /* Needle Drops - record store shelves */
+        drops: function (svg) {
+          elNS('rect', { width: 800, height: 450, fill: '#2b3340' }, svg);
+          // record disc
+          elNS('circle', { cx: 180, cy: 180, r: 118, fill: '#171c24' }, svg);
+          elNS('circle', { cx: 180, cy: 180, r: 118, fill: 'none', stroke: '#3d4756', 'stroke-width': 6 }, svg);
+          elNS('circle', { cx: 180, cy: 180, r: 52, fill: '#f6efe3' }, svg);
+          elNS('circle', { cx: 180, cy: 180, r: 8, fill: '#2b3340' }, svg);
+          elNS('rect', { x: 132, y: 172, width: 96, height: 8, rx: 4, fill: CORAL }, svg);
+          elNS('rect', { x: 150, y: 188, width: 60, height: 6, rx: 3, fill: '#d8d0c0' }, svg);
+
+          // shelf of records (a row of sleeves)
+          elNS('rect', { x: 350, y: 60, width: 400, height: 6, rx: 3, fill: '#3d4756' }, svg);
+          var sleeve = ['#ff8f80', MINT, BLUE, '#f2b34b', '#c99bd6', '#8fa3bd', CORAL, '#cdd6e0'];
+          sleeve.forEach(function (color, i) {
+            elNS('rect', { x: 356 + i * 48, y: 66, width: 42, height: 180, rx: 4, fill: color }, svg);
+            elNS('rect', { x: 356 + i * 48, y: 66, width: 42, height: 22, rx: 4, fill: '#ffffff', opacity: .25 }, svg);
+          });
+          // player touch: small EQ bars
+          [0, 1, 2, 3, 4, 5].forEach(function (i) {
+            var h = 18 + (i % 3) * 16;
+            elNS('rect', { x: 380 + i * 16, y: 330 - h, width: 9, height: h, rx: 4, fill: CORAL }, svg);
+          });
+        }
+      };
+
+      document.querySelectorAll('.thumb[data-shot]').forEach(function (el) {
+        var name = el.getAttribute('data-shot');
+        var svg = elNS('svg', {
+          viewBox: '0 0 800 450',
+          role: 'img',
+          'aria-label': 'Illustrated preview of the ' + name + ' project'
+        }, el);
+        if (covers[name]) covers[name](svg);
+      });
+
+      /* ====================================================================
+         4. AVATAR PLACEHOLDER (illustrated headshot)
+         ==================================================================== */
+      var avatarSlot = document.getElementById('avatar-slot');
+      if (avatarSlot) {
+        var av = elNS('svg', { viewBox: '0 0 300 356', role: 'img',
+          'aria-label': 'Illustrated placeholder portrait of Travis' }, avatarSlot);
+
+        elNS('rect', { width: 300, height: 356, rx: 30, fill: '#ffe8e4' }, av);
+        elNS('circle', { cx: 150, cy: 132, r: 66, fill: '#f9c396' }, av);   // face
+        elNS('path', { d: 'M84 124 A66 66 0 0 1 216 124 A20 20 0 0 1 84 124 Z', fill: INK }, av);  // hair
+        elNS('circle', { cx: 122, cy: 150, r: 5, fill: INK }, av);           // eyes
+        elNS('circle', { cx: 178, cy: 150, r: 5, fill: INK }, av);
+        elNS('circle', { cx: 124, cy: 148, r: 1.6, fill: '#fff' }, av);
+        elNS('circle', { cx: 180, cy: 148, r: 1.6, fill: '#fff' }, av);
+        elNS('circle', { cx: 108, cy: 168, r: 9, fill: '#f79a76', opacity: .5 }, av);  // blush
+        elNS('circle', { cx: 192, cy: 168, r: 9, fill: '#f79a76', opacity: .5 }, av);
+        elNS('path', { d: 'M134 172 q16 13 32 0', fill: 'none', stroke: INK,
+          'stroke-width': 3.5, 'stroke-linecap': 'round' }, av);              // smile
+
+        // "TR" monogram badge
+        elNS('rect', { x: 18, y: 18, width: 26, height: 26, rx: 9, fill: CORAL }, av);
+        elNS('text', { x: 31, y: 37, 'text-anchor': 'middle',
+          'font-family': 'DM Sans, Arial, sans-serif', 'font-size': '14', 'font-weight': '700', fill: '#fff' }, av)
+          .textContent = 'TR';
+
+        // desk + laptop combo below the portrait
+        elNS('rect', { x: 108, y: 236, width: 84, height: 50, rx: 7, fill: '#4b5568' }, av);   // screen
+        elNS('rect', { x: 92, y: 286, width: 116, height: 12, rx: 5, fill: '#343c4c' }, av);   // base
+        var taskbar = elNS('rect', { x: 108, y: 270, width: 84, height: 10, rx: 4, fill: '#eef0f4' }, av);
+        elNS('rect', { x: 168, y: 272, width: 20, height: 6, rx: 3, fill: CORAL }, av);
+        elNS('circle', { cx: 268, cy: 236, r: 16, fill: '#f9c396' }, av);    // coffee mug
+        elNS('rect', { x: 268, y: 220, width: 26, height: 34, rx: 8, fill: '#343c4c' }, av);
+        elNS('rect', { x: 296, y: 228, width: 7, height: 14, rx: 3, fill: '#343c4c' }, av);
+      }
+
+      /* ====================================================================
+         5. SCROLL EFFECTS - nav shadow + active link highlight
+         ==================================================================== */
+      var header = document.querySelector('.site-header');
+      var navLinks = document.querySelectorAll('.nav-links a');
+      var sections = ['hero', 'about', 'work', 'skills', 'process', 'learning', 'contact']
+        .map(function (id) { return document.getElementById(id); })
+        .filter(Boolean);
+
+      var scrollTimer = null;
+      window.addEventListener('scroll', function () {
+        if (header) header.classList.toggle('is-scrolled', window.scrollY > 20);
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(updateActiveLink, 90);
+      }, { passive: true });
+
+      function updateActiveLink() {
+        var mid = window.innerHeight / 2;
+        var best = null;
+        sections.forEach(function (sec) {
+          var r = sec.getBoundingClientRect();
+          var dist = Math.abs((r.top + r.height / 2) - mid);
+          if (best === null || dist < best.dist) best = { id: sec.id, dist: dist };
+        });
+        var id = (window.scrollY < window.innerHeight * 0.4) ? 'hero' : (best ? best.id : 'hero');
+        navLinks.forEach(function (a) {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+
+      /* ====================================================================
+         6. CONTACT FORM - validation + mailto fallback
+         ==================================================================== */
+      var form = document.querySelector('.contact-form');
+      var EMAIL = 'travisrountree@outlook.com';
+
+      function markError(field, input, bad) {
+        field.classList.toggle('invalid', bad);
+        input.setAttribute('aria-invalid', bad ? 'true' : 'false');
+        return !bad;
+      }
+
+      function validateField(input, cond) {
+        var field = input.closest('.field');
+        return markError(field, input, !cond(input.value.trim()));
+      }
+
+      var checkers = {
+        name: function (v) { return v.length > 0; },
+        email: function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); },
+        message: function (v) { return v.length > 0; }
+      };
+
+      if (form) {
+        var fallback = document.getElementById('form-fallback');
+
+        Object.keys(checkers).forEach(function (key) {
+          var input = form.querySelector('[name="' + key + '"]');
+          if (input) {
+            /* Clear the error while the user is fixing it */
+            input.addEventListener('input', function () {
+              markError(input.closest('.field'), input, false);
+            });
+          }
+        });
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+
+          var ok = true;
+          Object.keys(checkers).forEach(function (key) {
+            var input = form.querySelector('[name="' + key + '"]');
+            if (input && !validateField(input, checkers[key])) ok = false;
+          });
+          if (!ok) return;
+
+          var name = form.querySelector('[name="name"]').value.trim();
+          var subject = 'Portfolio message from ' + name;
+          var body =
+            'Hi Travis,\n\n' +
+            form.querySelector('[name="message"]').value.trim() +
+            '\n\n-- ' + name + '\n' + form.querySelector('[name="email"]').value.trim();
+
+          window.location.href =
+            'mailto:' + EMAIL +
+            '?subject=' + encodeURIComponent(subject) +
+            '&body=' + encodeURIComponent(body);
+
+          if (fallback) fallback.classList.add('is-active');
+          form.reset();
+        });
+      }
+
+      /* Kick the active-link state on load */
+      updateActiveLink();
+
+    })();
+  </script>
+</body>
+</html>

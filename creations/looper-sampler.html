@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOOP-8 // Sampler</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #080810;
+    --panel:    #0F0F1C;
+    --surface:  #161628;
+    --border:   #252540;
+    --mid:      #2D2D50;
+    --red:      #E63946;
+    --orange:   #FF6B35;
+    --teal:     #4ECDC4;
+    --yellow:   #FFD166;
+    --purple:   #9B5DE5;
+    --green:    #06D6A0;
+    --blue:     #118AB2;
+    --pink:     #EF476F;
+    --text:     #F0F0F5;
+    --muted:    #6666AA;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Space Grotesk', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-image: 
+      radial-gradient(ellipse 80% 40% at 50% -10%, rgba(78,205,196,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 30% at 80% 110%, rgba(230,57,70,0.05) 0%, transparent 60%);
+  }
+
+  .machine {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    width: 100%;
+    max-width: 900px;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03),
+      0 24px 80px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .logo-name {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text);
+  }
+  .logo-slash {
+    color: var(--teal);
+  }
+  .logo-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+  }
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .bpm-display {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .bpm-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    margin-bottom: 2px;
+  }
+  .bpm-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--teal);
+    line-height: 1;
+    cursor: default;
+    user-select: none;
+  }
+  .bpm-nudge {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .nudge-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 22px;
+    height: 18px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+  }
+  .nudge-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* ── VISUALIZER ── */
+  .visualizer-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 8px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .visualizer-label {
+    position: absolute;
+    top: 6px;
+    left: 10px;
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    z-index: 2;
+  }
+  canvas#vizCanvas {
+    width: 100%;
+    height: 60px;
+    display: block;
+  }
+
+  /* ── PAD GRID ── */
+  .pad-section {
+    margin-bottom: 20px;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .pad-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .pad {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 10px 10px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.08s, box-shadow 0.08s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 90px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .pad::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+    border-radius: inherit;
+  }
+  .pad.active::before { opacity: 1; }
+  .pad.hit { transform: scale(0.94); }
+
+  .pad[data-color="red"]   { --c: var(--red); }
+  .pad[data-color="orange"]{ --c: var(--orange); }
+  .pad[data-color="teal"]  { --c: var(--teal); }
+  .pad[data-color="yellow"]{ --c: var(--yellow); }
+  .pad[data-color="purple"]{ --c: var(--purple); }
+  .pad[data-color="green"] { --c: var(--green); }
+  .pad[data-color="blue"]  { --c: var(--blue); }
+  .pad[data-color="pink"]  { --c: var(--pink); }
+
+  .pad::before { background: radial-gradient(ellipse at center, color-mix(in srgb, var(--c) 25%, transparent), transparent 70%); }
+  .pad.active { border-color: var(--c); box-shadow: 0 0 16px -4px var(--c); }
+  .pad.hit { box-shadow: 0 0 28px -2px var(--c); }
+
+  .pad-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .pad-key {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1.4;
+    letter-spacing: 0.05em;
+  }
+  .pad.active .pad-key { border-color: var(--c); color: var(--c); }
+  .pad-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c);
+    opacity: 0.25;
+  }
+  .pad.active .pad-dot { opacity: 1; box-shadow: 0 0 8px var(--c); }
+
+  .pad-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 10px;
+  }
+  .pad-type {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    margin-top: 2px;
+    text-transform: uppercase;
+  }
+  .pad-wave {
+    height: 22px;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  /* ── LOOP TIMELINE ── */
+  .loop-section { margin-bottom: 20px; }
+  .loop-track {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    position: relative;
+    overflow: hidden;
+    height: 44px;
+  }
+  .track-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    width: 32px;
+    flex-shrink: 0;
+  }
+  .track-bar {
+    flex: 1;
+    height: 24px;
+    background: var(--bg);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .track-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    border-radius: 4px;
+    opacity: 0.15;
+    transition: width 0.05s linear;
+    width: 0%;
+  }
+  .track-events {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .track-event {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    border-radius: 3px;
+    opacity: 0.85;
+    min-width: 4px;
+  }
+  .track-head {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.6);
+    transition: left 0.05s linear;
+    left: 0%;
+  }
+  .track-vol {
+    width: 40px;
+    flex-shrink: 0;
+  }
+  .vol-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--teal);
+    cursor: pointer;
+  }
+
+  /* ── TRANSPORT ── */
+  .transport {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .transport-left {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+  }
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.12s;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--muted); background: var(--mid); }
+  .btn.primary { background: var(--teal); border-color: var(--teal); color: #080810; }
+  .btn.primary:hover { filter: brightness(1.1); }
+  .btn.danger  { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn.danger:hover { filter: brightness(1.1); }
+  .btn.active  { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn.record-active { background: var(--red); border-color: var(--red); color: #fff; animation: pulse-rec 1s infinite; }
+
+  @keyframes pulse-rec {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(230,57,70,0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(230,57,70,0); }
+  }
+
+  .icon { font-size: 13px; }
+
+  .transport-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .metronome-wrap { display: flex; align-items: center; gap: 6px; }
+  .metro-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.15em; }
+  .metro-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.06s, box-shadow 0.06s;
+  }
+  .metro-dot.beat { background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .status-text {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+  }
+  .status-indicators {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .indicator-led {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+  .indicator-led.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .indicator-led.warn { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  @media (max-width: 600px) {
+    .pad-grid { grid-template-columns: repeat(2, 1fr); }
+    .transport { flex-direction: column; align-items: stretch; }
+    .transport-left { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="machine">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <span class="logo-name">LOOP<span class="logo-slash">-</span>8</span>
+      <span class="logo-sub">// Sampler v1.0</span>
+    </div>
+    <div class="header-controls">
+      <div class="bpm-display">
+        <div class="bpm-label">BPM</div>
+        <div class="bpm-value" id="bpmDisplay">120</div>
+        <div class="bpm-nudge">
+          <button class="nudge-btn" onclick="changeBPM(-5)">−5</button>
+          <button class="nudge-btn" onclick="changeBPM(-1)">−</button>
+          <button class="nudge-btn" onclick="changeBPM(1)">+</button>
+          <button class="nudge-btn" onclick="changeBPM(5)">+5</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISUALIZER -->
+  <div class="visualizer-wrap">
+    <div class="visualizer-label">OSCILLOSCOPE</div>
+    <canvas id="vizCanvas" height="60"></canvas>
+  </div>
+
+  <!-- PADS -->
+  <div class="pad-section">
+    <div class="section-label">SAMPLE PADS — press keys 1–8 or tap</div>
+    <div class="pad-grid" id="padGrid"></div>
+  </div>
+
+  <!-- LOOP TRACKS -->
+  <div class="loop-section">
+    <div class="section-label">LOOP TIMELINE</div>
+    <div id="loopTracks"></div>
+  </div>
+
+  <!-- TRANSPORT -->
+  <div class="transport">
+    <div class="transport-left">
+      <button class="btn primary" id="playBtn" onclick="togglePlay()">
+        <span class="icon" id="playIcon">▶</span> <span id="playLabel">PLAY</span>
+      </button>
+      <button class="btn" id="recordBtn" onclick="toggleRecord()">
+        <span class="icon">●</span> REC
+      </button>
+      <button class="btn" onclick="clearLoop()">
+        <span class="icon">✕</span> CLEAR
+      </button>
+      <button class="btn" onclick="tapTempo()">
+        <span class="icon">⬟</span> TAP
+      </button>
+    </div>
+    <div class="transport-right">
+      <div class="metronome-wrap">
+        <span class="metro-label">BEAT</span>
+        <div class="metro-dot" id="m0"></div>
+        <div class="metro-dot" id="m1"></div>
+        <div class="metro-dot" id="m2"></div>
+        <div class="metro-dot" id="m3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status-bar">
+    <div class="status-text" id="statusText">READY — CLICK A PAD OR PRESS 1–8</div>
+    <div class="status-indicators">
+      <div class="indicator"><div class="indicator-led on" id="audioLed"></div> AUDIO</div>
+      <div class="indicator"><div class="indicator-led" id="recLed"></div> REC</div>
+      <div class="indicator"><div class="indicator-led" id="playLed"></div> PLAY</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  AUDIO ENGINE
+// ─────────────────────────────────────────────
+let audioCtx = null;
+let analyser  = null;
+let masterGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx   = new (window.AudioContext || window.webkitAudioContext)();
+  analyser   = audioCtx.createAnalyser();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.85;
+  masterGain.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  analyser.fftSize = 2048;
+  document.getElementById('audioLed').classList.add('on');
+}
+
+// ─────────────────────────────────────────────
+//  PAD DEFINITIONS
+// ─────────────────────────────────────────────
+const PADS = [
+  { name: 'Kick',     type: 'DRUM',   color: 'red',    key: '1', freq: 55,  decay: 0.5, wave: 'sine',     noiseAmt: 0,   pitchDrop: 45 },
+  { name: 'Snare',    type: 'DRUM',   color: 'orange', key: '2', freq: 180, decay: 0.3, wave: 'triangle', noiseAmt: 0.8, pitchDrop: 0  },
+  { name: 'Hi-Hat',   type: 'DRUM',   color: 'yellow', key: '3', freq: 600, decay: 0.08,wave: 'square',   noiseAmt: 0.9, pitchDrop: 0  },
+  { name: 'Open Hat', type: 'DRUM',   color: 'green',  key: '4', freq: 600, decay: 0.35,wave: 'square',   noiseAmt: 0.9, pitchDrop: 0  },
+  { name: 'Bass',     type: 'SYNTH',  color: 'purple', key: '5', freq: 80,  decay: 0.6, wave: 'sawtooth', noiseAmt: 0,   pitchDrop: 0  },
+  { name: 'Lead',     type: 'SYNTH',  color: 'teal',   key: '6', freq: 440, decay: 0.4, wave: 'square',   noiseAmt: 0,   pitchDrop: 0  },
+  { name: 'Chord',    type: 'SYNTH',  color: 'blue',   key: '7', freq: 261, decay: 0.55,wave: 'sawtooth', noiseAmt: 0,   pitchDrop: 0  },
+  { name: 'FX Zap',  type: 'FX',     color: 'pink',   key: '8', freq: 1200,decay: 0.25,wave: 'sawtooth', noiseAmt: 0.3, pitchDrop: 900},
+];
+
+// ─────────────────────────────────────────────
+//  SOUND SYNTHESIS
+// ─────────────────────────────────────────────
+function playSound(pad) {
+  initAudio();
+  const now = audioCtx.currentTime;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.001, now);
+  gain.gain.exponentialRampToValueAtTime(0.7, now + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + pad.decay);
+  gain.connect(masterGain);
+
+  // Oscillator
+  const osc = audioCtx.createOscillator();
+  osc.type = pad.wave;
+  osc.frequency.setValueAtTime(pad.freq, now);
+  if (pad.pitchDrop) osc.frequency.exponentialRampToValueAtTime(Math.max(1, pad.freq - pad.pitchDrop), now + pad.decay * 0.6);
+
+  // Noise layer
+  if (pad.noiseAmt > 0) {
+    const bufSize = audioCtx.sampleRate * pad.decay;
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * pad.noiseAmt;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buf;
+    const nGain = audioCtx.createGain();
+    nGain.gain.setValueAtTime(pad.noiseAmt * 0.4, now);
+    nGain.gain.exponentialRampToValueAtTime(0.001, now + pad.decay);
+    noise.connect(nGain);
+    nGain.connect(masterGain);
+    noise.start(now);
+    noise.stop(now + pad.decay + 0.05);
+  }
+
+  // Filter for synths
+  if (pad.type === 'SYNTH' || pad.type === 'FX') {
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(pad.freq * 6, now);
+    filter.frequency.exponentialRampToValueAtTime(pad.freq * 1.2, now + pad.decay * 0.7);
+    osc.connect(filter);
+    filter.connect(gain);
+  } else {
+    osc.connect(gain);
+  }
+
+  // Extra harmonics for chord
+  if (pad.name === 'Chord') {
+    [1.26, 1.5].forEach(ratio => {
+      const h = audioCtx.createOscillator();
+      h.type = 'sawtooth';
+      h.frequency.value = pad.freq * ratio;
+      const hg = audioCtx.createGain();
+      hg.gain.setValueAtTime(0.001, now);
+      hg.gain.exponentialRampToValueAtTime(0.3, now + 0.005);
+      hg.gain.exponentialRampToValueAtTime(0.001, now + pad.decay);
+      h.connect(hg); hg.connect(masterGain);
+      h.start(now); h.stop(now + pad.decay + 0.05);
+    });
+  }
+
+  osc.start(now);
+  osc.stop(now + pad.decay + 0.05);
+}
+
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let bpm       = 120;
+let isPlaying = false;
+let isRecording = false;
+let loopBars  = 2;           // bars per loop
+let loopEvents = [];         // { padIdx, time } where time is 0..1 fraction
+let loopStart = null;        // audioCtx time when loop recording started
+let loopLength = 0;          // seconds
+let playbackStart = null;
+let scheduledEvents = [];
+let padVolumes = PADS.map(() => 0.8);
+
+const tapTimes = [];
+
+// ─────────────────────────────────────────────
+//  BPM
+// ─────────────────────────────────────────────
+function changeBPM(delta) {
+  bpm = Math.max(40, Math.min(220, bpm + delta));
+  document.getElementById('bpmDisplay').textContent = bpm;
+  if (isPlaying) { stopPlay(); startPlay(); }
+}
+
+function tapTempo() {
+  const now = performance.now();
+  tapTimes.push(now);
+  if (tapTimes.length > 8) tapTimes.shift();
+  if (tapTimes.length >= 2) {
+    let sum = 0;
+    for (let i = 1; i < tapTimes.length; i++) sum += tapTimes[i] - tapTimes[i-1];
+    const avgMs = sum / (tapTimes.length - 1);
+    bpm = Math.round(60000 / avgMs);
+    bpm = Math.max(40, Math.min(220, bpm));
+    document.getElementById('bpmDisplay').textContent = bpm;
+    if (isPlaying) { stopPlay(); startPlay(); }
+  }
+  setStatus(`TAP TEMPO — ${bpm} BPM`);
+}
+
+// ─────────────────────────────────────────────
+//  PAD HIT
+// ─────────────────────────────────────────────
+function hitPad(idx) {
+  initAudio();
+  const pad = PADS[idx];
+  playSound(pad);
+
+  // Visual flash
+  const el = document.querySelectorAll('.pad')[idx];
+  el.classList.add('hit', 'active');
+  drawMiniWave(idx, pad.color);
+  setTimeout(() => el.classList.remove('hit'), 150);
+  setTimeout(() => el.classList.remove('active'), 400);
+
+  // Record event
+  if (isRecording && loopStart !== null) {
+    const fraction = ((audioCtx.currentTime - loopStart) % loopLength) / loopLength;
+    loopEvents.push({ padIdx: idx, time: fraction });
+    renderTrackEvent(idx, fraction);
+  }
+
+  setStatus(`${pad.name.toUpperCase()} — ${pad.type}`);
+}
+
+// ─────────────────────────────────────────────
+//  TRANSPORT
+// ─────────────────────────────────────────────
+function togglePlay() {
+  if (isPlaying) stopPlay(); else startPlay();
+}
+
+let rafId = null;
+let loopInterval = null;
+
+function startPlay() {
+  initAudio();
+  isPlaying = true;
+  document.getElementById('playBtn').classList.add('active');
+  document.getElementById('playIcon').textContent = '■';
+  document.getElementById('playLabel').textContent = 'STOP';
+  document.getElementById('playLed').classList.add('on');
+
+  const secsPerBeat = 60 / bpm;
+  loopLength = secsPerBeat * 4 * loopBars;
+  playbackStart = audioCtx.currentTime;
+
+  startMetronome();
+  startPlayback();
+  rafId = requestAnimationFrame(animLoop);
+  setStatus('PLAYING');
+}
+
+function stopPlay() {
+  isPlaying = false;
+  stopRecording();
+  document.getElementById('playBtn').classList.remove('active');
+  document.getElementById('playIcon').textContent = '▶';
+  document.getElementById('playLabel').textContent = 'PLAY';
+  document.getElementById('playLed').classList.remove('on');
+  clearInterval(loopInterval);
+  cancelAnimationFrame(rafId);
+  setStatus('STOPPED');
+}
+
+function startPlayback() {
+  if (!loopEvents.length) return;
+  clearTimeout(scheduledEvents._t);
+  scheduleNextLoop();
+}
+
+function scheduleNextLoop() {
+  if (!isPlaying) return;
+  const now = audioCtx.currentTime;
+  const elapsed = now - playbackStart;
+  const loopPos = elapsed % loopLength;
+  const loopNum = Math.floor(elapsed / loopLength);
+
+  loopEvents.forEach(ev => {
+    const evAbsTime = playbackStart + loopNum * loopLength + ev.time * loopLength;
+    if (evAbsTime > now) {
+      const delay = (evAbsTime - now) * 1000;
+      const t = setTimeout(() => {
+        if (!isPlaying) return;
+        playSound(PADS[ev.padIdx]);
+        flashPadLight(ev.padIdx);
+      }, delay);
+      scheduledEvents.push(t);
+    }
+  });
+
+  // Schedule next loop cycle
+  const nextLoopAt = (loopLength - loopPos) * 1000;
+  scheduledEvents._t = setTimeout(() => {
+    scheduledEvents.forEach(t => clearTimeout(t));
+    scheduledEvents = [];
+    scheduleNextLoop();
+  }, nextLoopAt + 10);
+}
+
+function flashPadLight(idx) {
+  const el = document.querySelectorAll('.pad')[idx];
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 200);
+}
+
+// ─────────────────────────────────────────────
+//  RECORDING
+// ─────────────────────────────────────────────
+function toggleRecord() {
+  if (isRecording) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  initAudio();
+  if (!isPlaying) startPlay();
+  isRecording = true;
+  loopStart = audioCtx.currentTime;
+  const secsPerBeat = 60 / bpm;
+  loopLength = secsPerBeat * 4 * loopBars;
+  document.getElementById('recordBtn').classList.add('record-active');
+  document.getElementById('recLed').classList.add('warn');
+  setStatus('RECORDING — PLAY THE PADS');
+}
+
+function stopRecording() {
+  isRecording = false;
+  loopStart = null;
+  document.getElementById('recordBtn').classList.remove('record-active');
+  document.getElementById('recLed').classList.remove('warn');
+  if (loopEvents.length) {
+    scheduledEvents.forEach(t => clearTimeout(t));
+    scheduledEvents = [];
+    scheduleNextLoop();
+    setStatus(`LOOP READY — ${loopEvents.length} EVENTS`);
+  } else {
+    setStatus('RECORDING STOPPED');
+  }
+}
+
+function clearLoop() {
+  loopEvents = [];
+  scheduledEvents.forEach(t => clearTimeout(t));
+  scheduledEvents = [];
+  renderAllTracks();
+  setStatus('LOOP CLEARED');
+}
+
+// ─────────────────────────────────────────────
+//  METRONOME
+// ─────────────────────────────────────────────
+let beat = 0;
+let metroTimer = null;
+
+function startMetronome() {
+  clearInterval(metroTimer);
+  beat = 0;
+  tickMetro();
+  metroTimer = setInterval(tickMetro, (60 / bpm) * 1000);
+}
+
+function tickMetro() {
+  document.querySelectorAll('.metro-dot').forEach((d, i) => {
+    d.classList.toggle('beat', i === beat % 4);
+  });
+  beat++;
+}
+
+// ─────────────────────────────────────────────
+//  VISUALIZER
+// ─────────────────────────────────────────────
+const canvas = document.getElementById('vizCanvas');
+const ctx2 = canvas.getContext('2d');
+
+function animLoop() {
+  if (!isPlaying) return;
+  drawViz();
+  drawTimeline();
+  rafId = requestAnimationFrame(animLoop);
+}
+
+function drawViz() {
+  const W = canvas.offsetWidth, H = 60;
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx2.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  ctx2.clearRect(0, 0, W, H);
+
+  if (!analyser) {
+    drawFlatLine(W, H);
+    return;
+  }
+
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(buf);
+
+  ctx2.lineWidth = 1.5;
+  ctx2.strokeStyle = '#4ECDC4';
+  ctx2.shadowColor = '#4ECDC4';
+  ctx2.shadowBlur = 6;
+  ctx2.beginPath();
+
+  for (let i = 0; i < buf.length; i++) {
+    const x = (i / buf.length) * W;
+    const y = ((buf[i] / 128) - 1) * (H * 0.4) + H / 2;
+    i === 0 ? ctx2.moveTo(x, y) : ctx2.lineTo(x, y);
+  }
+  ctx2.stroke();
+  ctx2.shadowBlur = 0;
+}
+
+function drawFlatLine(W, H) {
+  ctx2.lineWidth = 1;
+  ctx2.strokeStyle = '#252540';
+  ctx2.beginPath();
+  ctx2.moveTo(0, H / 2);
+  ctx2.lineTo(W, H / 2);
+  ctx2.stroke();
+}
+
+// ─────────────────────────────────────────────
+//  MINI WAVEFORMS ON PADS
+// ─────────────────────────────────────────────
+const colorMap = { red:'#E63946', orange:'#FF6B35', yellow:'#FFD166', green:'#06D6A0', purple:'#9B5DE5', teal:'#4ECDC4', blue:'#118AB2', pink:'#EF476F' };
+
+function drawMiniWave(idx, color) {
+  const svgEl = document.querySelectorAll('.pad-wave')[idx];
+  const W = svgEl.offsetWidth || 120, H = 22;
+  const pts = [];
+  const c = colorMap[color] || '#4ECDC4';
+  for (let i = 0; i <= 40; i++) {
+    const x = (i / 40) * W;
+    const env = Math.exp(-i / 10);
+    const y = H/2 + env * (H/2.5) * (Math.random() - 0.5) * 2;
+    pts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  svgEl.innerHTML = `<polyline points="" fill="none" stroke="${c}" stroke-width="1.5" opacity="0.6"/>`;
+  const poly = svgEl.querySelector('polyline');
+  poly.setAttribute('points', pts.map(p => p.replace('M','').replace('L','')).join(' '));
+}
+
+// ─────────────────────────────────────────────
+//  LOOP TIMELINE RENDERING
+// ─────────────────────────────────────────────
+function renderAllTracks() {
+  document.querySelectorAll('.track-events').forEach(el => el.innerHTML = '');
+}
+
+function renderTrackEvent(padIdx, fraction) {
+  const trackEl = document.querySelectorAll('.track-events')[padIdx];
+  if (!trackEl) return;
+  const bar = document.createElement('div');
+  bar.className = 'track-event';
+  bar.style.left = `${fraction * 100}%`;
+  bar.style.width = '6px';
+  bar.style.background = colorMap[PADS[padIdx].color];
+  trackEl.appendChild(bar);
+}
+
+function drawTimeline() {
+  if (!isPlaying || !playbackStart) return;
+  const elapsed = audioCtx.currentTime - playbackStart;
+  const pos = (elapsed % loopLength) / loopLength;
+  document.querySelectorAll('.track-head').forEach(h => {
+    h.style.left = `${pos * 100}%`;
+  });
+  document.querySelectorAll('.track-fill').forEach(f => {
+    f.style.width = `${pos * 100}%`;
+  });
+}
+
+// ─────────────────────────────────────────────
+//  STATUS
+// ─────────────────────────────────────────────
+function setStatus(msg) {
+  document.getElementById('statusText').textContent = msg;
+}
+
+// ─────────────────────────────────────────────
+//  BUILD DOM
+// ─────────────────────────────────────────────
+function buildPads() {
+  const grid = document.getElementById('padGrid');
+  PADS.forEach((pad, i) => {
+    const el = document.createElement('div');
+    el.className = 'pad';
+    el.dataset.color = pad.color;
+    el.innerHTML = `
+      <div class="pad-top">
+        <div class="pad-key">${pad.key}</div>
+        <div class="pad-dot"></div>
+      </div>
+      <svg class="pad-wave" viewBox="0 0 120 22" preserveAspectRatio="none"></svg>
+      <div>
+        <div class="pad-name">${pad.name}</div>
+        <div class="pad-type">${pad.type}</div>
+      </div>
+    `;
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      hitPad(i);
+    });
+    grid.appendChild(el);
+  });
+}
+
+function buildTracks() {
+  const wrap = document.getElementById('loopTracks');
+  PADS.forEach((pad, i) => {
+    const row = document.createElement('div');
+    row.className = 'loop-track';
+    row.innerHTML = `
+      <div class="track-label" style="color:${colorMap[pad.color]}">${pad.key}</div>
+      <div class="track-bar">
+        <div class="track-fill" style="background:${colorMap[pad.color]}"></div>
+        <div class="track-events"></div>
+        <div class="track-head"></div>
+      </div>
+      <div class="track-vol">
+        <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="${padVolumes[i]}" 
+               oninput="padVolumes[${i}] = +this.value">
+      </div>
+    `;
+    wrap.appendChild(row);
+  });
+}
+
+// ─────────────────────────────────────────────
+//  KEYBOARD
+// ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  const key = e.key;
+  if (key >= '1' && key <= '8') hitPad(parseInt(key) - 1);
+  if (key === ' ') { e.preventDefault(); togglePlay(); }
+  if (key === 'r' || key === 'R') toggleRecord();
+  if (key === 'ArrowUp')   changeBPM(1);
+  if (key === 'ArrowDown') changeBPM(-1);
+});
+
+// ─────────────────────────────────────────────
+//  IDLE VISUALIZER
+// ─────────────────────────────────────────────
+let idleRaf;
+function idleViz() {
+  const W = canvas.offsetWidth, H = 60;
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx2.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx2.clearRect(0, 0, W, H);
+  const t = performance.now() / 1000;
+  ctx2.lineWidth = 1;
+  ctx2.strokeStyle = 'rgba(78,205,196,0.2)';
+  ctx2.beginPath();
+  for (let x = 0; x <= W; x++) {
+    const y = H/2 + Math.sin(x * 0.04 + t * 1.2) * 3 + Math.sin(x * 0.015 + t * 0.7) * 5;
+    x === 0 ? ctx2.moveTo(x, y) : ctx2.lineTo(x, y);
+  }
+  ctx2.stroke();
+  idleRaf = requestAnimationFrame(idleViz);
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+buildPads();
+buildTracks();
+idleViz();
+</script>
+</body>
+</html>

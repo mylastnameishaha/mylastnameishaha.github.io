@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Give Me Byte or Give Me Death</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IM+Fell+English+SC&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parchment:#e8dcc0;
+    --parchment-dark:#d4c49a;
+    --ink:#2a1f14;
+    --blue:#28458c;
+    --blue-dark:#182c59;
+    --red:#a82027;
+    --red-dark:#6e1218;
+    --gold:#d4af37;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:#0c0a08;
+    font-family:'EB Garamond', serif;
+    overflow:hidden;
+    color:var(--parchment);
+  }
+  #wrap{
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(ellipse at center, #1a140d 0%, #0c0a08 70%);
+  }
+  #stage{
+    position:relative;
+    width:960px; max-width:98vw;
+    aspect-ratio:16/9;
+    border:6px solid var(--gold);
+    outline: 2px solid #3a2a12;
+    box-shadow:
+      0 0 0 4px #0c0a08,
+      0 0 40px rgba(212,175,55,0.35),
+      inset 0 0 60px rgba(0,0,0,0.5);
+    background:#000;
+    image-rendering: pixelated;
+  }
+  canvas{
+    position:absolute; top:0; left:0;
+    width:100%; height:100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    display:block;
+  }
+  #overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    text-align:center;
+    z-index:5;
+    pointer-events:none;
+  }
+  #overlay.active{ pointer-events:auto; }
+  .pixel{
+    font-family:'Press Start 2P', monospace;
+    letter-spacing:1px;
+  }
+  .panel{
+    background:linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+    color:var(--ink);
+    border:4px solid var(--ink);
+    box-shadow: 0 0 0 3px var(--gold), 0 8px 24px rgba(0,0,0,0.6);
+    padding:28px 34px;
+    max-width:80%;
+    position:relative;
+  }
+  .panel::before{
+    content:'';
+    position:absolute; inset:8px;
+    border:1px solid rgba(42,31,20,0.35);
+    pointer-events:none;
+  }
+  .title-main{
+    font-size:26px;
+    color:var(--red-dark);
+    text-shadow:2px 2px 0 var(--gold);
+    line-height:1.6;
+    margin:0 0 10px 0;
+  }
+  .title-sub{
+    font-family:'IM Fell English SC', serif;
+    font-size:22px;
+    color:var(--blue-dark);
+    margin:6px 0 22px 0;
+    letter-spacing:2px;
+  }
+  .btn{
+    font-family:'Press Start 2P', monospace;
+    font-size:12px;
+    background:var(--blue);
+    color:var(--parchment);
+    border:none;
+    border-bottom:4px solid var(--blue-dark);
+    padding:14px 22px;
+    cursor:pointer;
+    margin:8px;
+    transition:transform .08s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); background:var(--red); border-bottom-color:var(--red-dark); }
+  .btn:active{ transform:translateY(2px); border-bottom-width:1px; }
+  .story-text{
+    font-family:'EB Garamond', serif;
+    font-size:19px;
+    line-height:1.7;
+    color:var(--ink);
+    min-height:120px;
+    text-align:left;
+    white-space:pre-wrap;
+  }
+  .hint{
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    margin-top:18px;
+    color:var(--blue-dark);
+    opacity:.85;
+    animation:blink 1.4s infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:.85} 50%{opacity:.15} }
+  #hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:8px 10px;
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    z-index:4;
+    pointer-events:none;
+    text-shadow:2px 2px 0 #000;
+  }
+  #stage:focus{ outline:none; }
+  .credit{
+    font-family:'IM Fell English SC', serif;
+    font-size:15px;
+    color:var(--blue-dark);
+    margin-top:4px;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage" tabindex="0">
+    <canvas id="game" width="320" height="180"></canvas>
+    <div id="hud"></div>
+    <div id="overlay"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================= CANVAS / SCALING ============================= */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const W = canvas.width, H = canvas.height;
+const stage = document.getElementById('stage');
+const hud = document.getElementById('hud');
+const overlay = document.getElementById('overlay');
+
+/* ============================= AUDIO ENGINE ============================= */
+const Audio8 = (function(){
+  let actx = null;
+  let musicOn = true;
+  let musicTimer = null;
+  let musicStep = 0;
+  let currentSeq = null;
+
+  function ensure(){
+    if(!actx){
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+
+  function tone(freq, dur, type, vol, delay, glideTo){
+    if(!musicOn && type==='music') return;
+    const ac = ensure();
+    const t0 = ac.currentTime + (delay||0);
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = type || 'square';
+    osc.frequency.setValueAtTime(freq, t0);
+    if(glideTo) osc.frequency.linearRampToValueAtTime(glideTo, t0+dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(vol||0.12, t0+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  }
+
+  function noise(dur, vol, delay){
+    const ac = ensure();
+    const t0 = ac.currentTime + (delay||0);
+    const bufferSize = ac.sampleRate * dur;
+    const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++){ data[i] = (Math.random()*2-1) * (1 - i/bufferSize); }
+    const src = ac.createBufferSource();
+    src.buffer = buffer;
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(vol||0.2, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    src.connect(gain); gain.connect(ac.destination);
+    src.start(t0);
+  }
+
+  const SFX = {
+    shoot(){ tone(620,0.06,'square',0.05,0,180); noise(0.03,0.03); },
+    hit(){ tone(140,0.12,'sawtooth',0.08,0,60); },
+    enemyDown(){ tone(300,0.09,'square',0.08,0,150); tone(500,0.07,'square',0.06,0.06); },
+    hurt(){ tone(90,0.2,'sawtooth',0.12,0,40); noise(0.15,0.08); },
+    levelClear(){ [440,554,659,880].forEach((f,i)=>tone(f,0.16,'square',0.09,i*0.11)); },
+    gameOver(){ [300,260,220,180,140].forEach((f,i)=>tone(f,0.22,'sawtooth',0.1,i*0.14)); },
+    victory(){ [523,659,784,1046,784,1046,1318].forEach((f,i)=>tone(f,0.18,'square',0.1,i*0.13)); },
+    select(){ tone(440,0.05,'square',0.06,0); },
+    reload(){ tone(200,0.05,'triangle',0.05,0); }
+  };
+
+  const SEQS = {
+    fife: [659,0,784,0,880,784,659,0, 587,0,659,0,784,659,587,0],
+    drums: [1,0,1,1,0,1,0,1],
+    march: [392,392,523,392,466,392,349,392, 392,392,523,392,440,349,392,0],
+    snow:  [349,0,392,0,440,392,349,0, 330,0,349,0,392,349,330,0],
+    river: [220,0,262,0,294,262,220,0, 196,0,220,0,262,220,196,0],
+    victory:[523,659,784,1046,988,880,784,659, 523,659,784,880,1046,1174,1318,0]
+  };
+
+  function startMusic(seqName, tempo){
+    stopMusic();
+    currentSeq = SEQS[seqName] || SEQS.march;
+    musicStep = 0;
+    const stepDur = tempo || 0.16;
+    musicTimer = setInterval(()=>{
+      if(!musicOn) { return; }
+      const note = currentSeq[musicStep % currentSeq.length];
+      if(note) tone(note, stepDur*0.9, 'square', 0.045, 0);
+      if(musicStep % 2 === 0) noise(0.03, 0.02);
+      musicStep++;
+    }, stepDur*1000);
+  }
+  function stopMusic(){
+    if(musicTimer){ clearInterval(musicTimer); musicTimer=null; }
+  }
+  function toggleMusic(){
+    musicOn = !musicOn;
+    return musicOn;
+  }
+  return { SFX, startMusic, stopMusic, toggleMusic, ensure, get on(){return musicOn;} };
+})();
+
+/* ============================= PALETTE ============================= */
+const PAL = {
+  0:null,
+  1:'#241811', // dark brown/black
+  2:'#e8b382', // skin
+  3:'#28458c', // patriot blue
+  4:'#f4ede0', // white/cream
+  5:'#7a4a22', // musket wood
+  6:'#c7ccd4', // musket metal
+  7:'#a82027', // redcoat red
+  8:'#1a1a1a', // black hat
+  9:'#d4af37', // gold trim
+  A:'#6e1218', // dark red shade
+  B:'#182c59', // dark blue shade
+  C:'#f0e6c8', // powder wig / cream
+  D:'#5c3a1e', // dark musket
+  E:'#8f959e'  // light metal
+};
+
+function drawSprite(grid, x, y, scale, flip){
+  const rows = grid.length, cols = grid[0].length;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const key = grid[r][c];
+      if(key === '0' || key === 0) continue;
+      const color = PAL[key];
+      if(!color) continue;
+      ctx.fillStyle = color;
+      const px = flip ? (cols-1-c) : c;
+      ctx.fillRect(Math.round(x+px*scale), Math.round(y+r*scale), scale, scale);
+    }
+  }
+}
+
+/* Sprite grids (rows x cols), values map to PAL */
+const SPR_PATRIOT_STAND = [
+"00888800",
+"08888880",
+"08222280",
+"08222280",
+"03333330",
+"3333333D",
+"3D333DD5",
+"3333333D",
+"04440440",
+"04440440",
+"04440044",
+"01100011"
+];
+const SPR_PATRIOT_WALK = [
+"00888800",
+"08888880",
+"08222280",
+"08222280",
+"03333330",
+"3333333D",
+"3D333DD5",
+"3333333D",
+"04044004",
+"00440400",
+"04400440",
+"01000110"
+];
+const SPR_REDCOAT = [
+"00888800",
+"08888880",
+"08222280",
+"08222280",
+"07777770",
+"7744477E",
+"74777470",
+"77777770",
+"04440440",
+"04440440",
+"07700770",
+"08800880"
+];
+const SPR_REDCOAT_BOSS = [
+"00CCC000",
+"0C88880C",
+"C8888888",
+"98222289",
+"98222289",
+"97777779",
+"7799977E",
+"77999770",
+"79797970",
+"79999970",
+"07700770",
+"08800880"
+];
+const SPR_CANNONBALL = [
+"01100",
+"18881",
+"18881",
+"01100"
+];
+
+/* ============================= LEVEL DATA ============================= */
+const LEVELS = [
+  {
+    id:0,
+    name:"LEXINGTON GREEN",
+    date:"APRIL 19, 1775",
+    sky:['#1c1430','#4a2f4f','#c9744a'],
+    ground:'#3a5a2e',
+    groundDark:'#2a4322',
+    theme:'dawn',
+    targetKills: 10,
+    spawnInterval: 1.7,
+    enemySpeed: 22,
+    music:'fife',
+    intro: "Before dawn, riders sound the alarm across the Massachusetts countryside.\n\nOn Lexington Green, a thin line of militia stands against the King's regulars.\n\nA shot rings out -- no one will ever know from which side.\n\nThe war for independence has begun.",
+    outro: "The regulars push on toward Concord, but word spreads faster than they march.\n\nBy nightfall, militia from every township line the roads home.\n\nThe embers of rebellion are lit."
+  },
+  {
+    id:1,
+    name:"BUNKER HILL",
+    date:"JUNE 17, 1775",
+    sky:['#1a1a24','#3a3550','#7a6a55'],
+    ground:'#5a5238',
+    groundDark:'#413a28',
+    theme:'smoke',
+    targetKills: 16,
+    spawnInterval: 1.4,
+    enemySpeed: 26,
+    music:'drums',
+    intro: "\"Don't fire until you see the whites of their eyes.\"\n\nGunpowder is scarce. Every shot must count.\n\nThree times the Redcoats climb the hill. Twice they are thrown back.",
+    outro: "The hill is lost, but the cost is staggering for the Crown.\n\nColonial forces prove they can stand against the finest army on Earth.\n\nWord of this reaches every colony -- and the ocean beyond."
+  },
+  {
+    id:2,
+    name:"CROSSING THE DELAWARE",
+    date:"DECEMBER 25, 1776",
+    sky:['#050914','#0d1a30','#1c2d48'],
+    ground:'#1c3550',
+    groundDark:'#122238',
+    theme:'river',
+    targetKills: 18,
+    spawnInterval: 1.25,
+    enemySpeed: 30,
+    music:'river',
+    intro: "The Continental Army is battered, unpaid, and freezing.\n\nOn Christmas night, General Washington leads a desperate crossing through ice-choked waters.\n\nTrenton sleeps, unaware the Continentals are already on the march.",
+    outro: "The surprise at Trenton succeeds beyond hope.\n\nA dying cause finds its second wind.\n\nEnlistments, that had nearly run out, are renewed."
+  },
+  {
+    id:3,
+    name:"VALLEY FORGE",
+    date:"WINTER 1777-78",
+    sky:['#22262e','#4a5058','#8f97a0'],
+    ground:'#d8dde2',
+    groundDark:'#b9c1c9',
+    theme:'snow',
+    targetKills: 20,
+    spawnInterval: 1.15,
+    enemySpeed: 34,
+    music:'snow',
+    intro: "No battle rages here, only cold, hunger, and the slow grinding of resolve.\n\nBaron von Steuben drills the army into a true fighting force.\n\nThose who endure this winter will emerge a different army entirely.",
+    outro: "Spring arrives, and with it, discipline the army never had before.\n\nWhat survived Valley Forge would not break again.\n\nFrance, watching closely, commits ships and soldiers to the cause."
+  },
+  {
+    id:4,
+    name:"YORKTOWN",
+    date:"OCTOBER 19, 1781",
+    sky:['#1a1220','#5a3550','#c98a4a'],
+    ground:'#5a4a2e',
+    groundDark:'#3a2e1e',
+    theme:'sunset',
+    targetKills: 14,
+    boss:true,
+    bossHP: 60,
+    spawnInterval: 1.6,
+    enemySpeed: 30,
+    music:'march',
+    intro: "Trapped between Washington's army and the French fleet, Cornwallis is out of options.\n\nThe final siege begins. This is the last great battle of the war.\n\nEvery shot fired here echoes across an ocean, and across centuries.",
+    outro: "The British lay down their arms as their band plays a tune of a world turned upside down.\n\nSix years of war end not with a whimper, but with the birth of a nation.\n\nIndependence, so long fought for, is finally won."
+  }
+];
+
+/* ============================= GAME STATE ============================= */
+const KEY = {left:false,right:false,fire:false};
+let state = 'title'; // title, storyIntro, playing, storyOutro, gameover, victory, paused
+let levelIdx = 0;
+let score = 0;
+let lives = 3;
+let fortHP = 100;
+let fortMax = 100;
+let kills = 0;
+let player, enemies, projectiles, particles, flashTimer, shake;
+let fireCooldown = 0;
+let stormAngle = 0;
+let time = 0;
+let boss = null;
+let storyTextFull = "";
+let storyTextShown = "";
+let storyCharIdx = 0;
+let storyCharTimer = 0;
+let scorePopups = [];
+
+function initPlayer(){
+  player = { x: W/2, y: H-26, w:8, h:12, speed: 90, hurtFlash:0 };
+}
+
+function resetGameState(){
+  score = 0; lives = 3; levelIdx = 0;
+  storyTextForLevel(true);
+}
+
+function storyTextForLevel(intro){
+  const lvl = LEVELS[levelIdx];
+  storyTextFull = intro ? lvl.intro : lvl.outro;
+  storyTextShown = "";
+  storyCharIdx = 0;
+  storyCharTimer = 0;
+}
+
+function beginLevel(){
+  const lvl = LEVELS[levelIdx];
+  fortHP = fortMax;
+  kills = 0;
+  enemies = [];
+  projectiles = [];
+  particles = [];
+  scorePopups = [];
+  boss = lvl.boss ? { hp: lvl.bossHP, maxHP: lvl.bossHP, x: W/2, y: 26, dir:1, active:false, entering:true, entryY:-20 } : null;
+  spawnTimer = 0;
+  initPlayer();
+  Audio8.startMusic(lvl.music, 0.15);
+  state = 'playing';
+  renderOverlayNone();
+}
+
+let spawnTimer = 0;
+
+function spawnEnemy(){
+  const lvl = LEVELS[levelIdx];
+  const x = 20 + Math.random()*(W-40);
+  enemies.push({
+    x:x, y:-14, w:8, h:12,
+    speed: lvl.enemySpeed + Math.random()*10,
+    hp: 1,
+    hitFlash:0,
+    wobble: Math.random()*Math.PI*2
+  });
+}
+
+function fire(){
+  if(fireCooldown>0) return;
+  fireCooldown = 0.20;
+  projectiles.push({x:player.x, y:player.y-6, vy:-190, w:2,h:5});
+  Audio8.SFX.shoot();
+  particles.push({x:player.x, y:player.y-8, vx:(Math.random()-0.5)*20, vy:-30, life:0.15, maxLife:0.15, color:'#ffe89a', size:2});
+}
+
+function addScorePopup(x,y,text,color){
+  scorePopups.push({x,y,text,color:color||'#ffe89a',life:0.7,maxLife:0.7});
+}
+
+function damageFort(amount){
+  fortHP -= amount;
+  shake = 0.25;
+  Audio8.SFX.hurt();
+  if(fortHP <= 0){
+    fortHP = 0;
+    loseLife();
+  }
+}
+
+function loseLife(){
+  lives--;
+  if(lives <= 0){
+    state = 'gameover';
+    Audio8.stopMusic();
+    Audio8.SFX.gameOver();
+    renderGameOver();
+  } else {
+    fortHP = fortMax;
+    enemies = [];
+    projectiles = [];
+  }
+}
+
+/* ============================= UPDATE ============================= */
+function update(dt){
+  time += dt;
+  if(shake > 0) shake = Math.max(0, shake - dt);
+  if(fireCooldown>0) fireCooldown -= dt;
+
+  if(state !== 'playing') return;
+  const lvl = LEVELS[levelIdx];
+
+  // player movement
+  let mv = 0;
+  if(KEY.left) mv -= 1;
+  if(KEY.right) mv += 1;
+  player.x += mv * player.speed * dt;
+  player.x = Math.max(10, Math.min(W-10, player.x));
+  if(KEY.fire) fire();
+  if(player.hurtFlash>0) player.hurtFlash -= dt;
+
+  // spawn logic
+  spawnTimer -= dt;
+  if(spawnTimer <= 0 && kills < lvl.targetKills){
+    spawnTimer = lvl.spawnInterval * (0.7 + Math.random()*0.6);
+    if(!(lvl.boss && enemies.length > 4)) spawnEnemy();
+  }
+
+  // boss entry
+  if(boss && boss.entering){
+    boss.entryY += dt*40;
+    boss.y = -20 + boss.entryY;
+    if(boss.y >= 22){ boss.y = 22; boss.entering = false; boss.active = true; }
+  }
+  if(boss && boss.active){
+    boss.x += boss.dir * 30 * dt;
+    if(boss.x < 30 || boss.x > W-30) boss.dir *= -1;
+  }
+
+  // enemies
+  for(let i=enemies.length-1;i>=0;i--){
+    const e = enemies[i];
+    e.wobble += dt*4;
+    e.x += Math.sin(e.wobble)*6*dt;
+    e.y += e.speed*dt;
+    if(e.hitFlash>0) e.hitFlash -= dt;
+    if(e.y > H-18){
+      damageFort(10);
+      enemies.splice(i,1);
+      continue;
+    }
+  }
+
+  // projectiles
+  for(let i=projectiles.length-1;i>=0;i--){
+    const p = projectiles[i];
+    p.y += p.vy*dt;
+    if(p.y < -10){ projectiles.splice(i,1); continue; }
+    let hit = false;
+    for(let j=enemies.length-1;j>=0;j--){
+      const e = enemies[j];
+      if(Math.abs(p.x-e.x) < 7 && Math.abs(p.y-e.y) < 8){
+        enemies.splice(j,1);
+        kills++;
+        score += 25;
+        Audio8.SFX.enemyDown();
+        for(let k=0;k<6;k++){
+          particles.push({x:e.x,y:e.y,vx:(Math.random()-0.5)*80,vy:(Math.random()-0.5)*80,life:0.35,maxLife:0.35,color:'#ffd35c',size:2});
+        }
+        addScorePopup(e.x,e.y,'+25','#ffe89a');
+        hit = true;
+        break;
+      }
+    }
+    if(!hit && boss && boss.active){
+      if(Math.abs(p.x-boss.x) < 16 && Math.abs(p.y-boss.y) < 14){
+        boss.hp -= 3;
+        Audio8.SFX.hit();
+        addScorePopup(boss.x+10,boss.y,'-3','#ff6b6b');
+        hit = true;
+        if(boss.hp <= 0){
+          boss.active = false;
+          score += 500;
+          Audio8.SFX.victory();
+          for(let k=0;k<30;k++){
+            particles.push({x:boss.x,y:boss.y,vx:(Math.random()-0.5)*160,vy:(Math.random()-0.5)*160,life:0.6,maxLife:0.6,color:['#ffd35c','#ff6b6b','#7fdbff'][k%3],size:2});
+          }
+        }
+      }
+    }
+    if(hit) projectiles.splice(i,1);
+  }
+
+  // particles
+  for(let i=particles.length-1;i>=0;i--){
+    const pt = particles[i];
+    pt.x += pt.vx*dt; pt.y += pt.vy*dt; pt.life -= dt;
+    if(pt.life<=0) particles.splice(i,1);
+  }
+  for(let i=scorePopups.length-1;i>=0;i--){
+    const s = scorePopups[i];
+    s.y -= 14*dt; s.life -= dt;
+    if(s.life<=0) scorePopups.splice(i,1);
+  }
+
+  // level complete check
+  const bossDead = lvl.boss ? (boss && boss.hp<=0 && !boss.active && !boss.entering) : true;
+  if(kills >= lvl.targetKills && enemies.length===0 && bossDead){
+    Audio8.stopMusic();
+    Audio8.SFX.levelClear();
+    state = 'storyOutro';
+    storyTextForLevel(false);
+    renderStory(false);
+  }
+}
+
+/* ============================= RENDER ============================= */
+function drawBackground(){
+  const lvl = LEVELS[levelIdx];
+  const g = ctx.createLinearGradient(0,0,0,H*0.65);
+  g.addColorStop(0, lvl.sky[0]);
+  g.addColorStop(0.55, lvl.sky[1]);
+  g.addColorStop(1, lvl.sky[2]);
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H*0.68);
+
+  // stars for dawn/night themes
+  if(lvl.theme==='dawn' || lvl.theme==='river'){
+    for(let i=0;i<24;i++){
+      const sx = (i*37 + 13) % W;
+      const sy = (i*23) % (H*0.4);
+      const tw = (Math.sin(time*2+i)+1)/2;
+      ctx.fillStyle = `rgba(255,255,255,${0.15+tw*0.35})`;
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+  }
+  // sun/moon
+  ctx.fillStyle = lvl.theme==='sunset' ? '#f2c46d' : (lvl.theme==='dawn'?'#e8a06a':'#dfe6ea');
+  ctx.beginPath();
+  ctx.arc(W*0.82, H*0.22, 10, 0, Math.PI*2);
+  ctx.fill();
+
+  // ground
+  ctx.fillStyle = lvl.ground;
+  ctx.fillRect(0, H*0.68, W, H*0.32);
+  ctx.fillStyle = lvl.groundDark;
+  for(let x=0;x<W;x+=16){
+    ctx.fillRect(x, H*0.68 + ((x/16)%2===0?0:3), 16, 4);
+  }
+
+  // theme decor
+  if(lvl.theme==='dawn'){
+    ctx.fillStyle = '#160f22';
+    ctx.fillRect(10,H*0.5,4,H*0.2);
+    ctx.beginPath(); ctx.moveTo(12,H*0.5); ctx.lineTo(6,H*0.42); ctx.lineTo(18,H*0.42); ctx.closePath(); ctx.fill();
+    ctx.fillRect(W-40,H*0.44,3,H*0.26);
+    ctx.fillRect(W-46,H*0.44,15,4);
+  } else if(lvl.theme==='smoke'){
+    for(let i=0;i<3;i++){
+      ctx.fillStyle = `rgba(200,200,200,${0.06+0.02*i})`;
+      ctx.beginPath();
+      ctx.ellipse(60+i*90 + Math.sin(time*0.3+i)*6, H*0.35+i*6, 40, 14, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.fillStyle='#3a3020';
+    ctx.fillRect(0,H*0.62,W,3);
+  } else if(lvl.theme==='river'){
+    ctx.fillStyle = 'rgba(120,150,190,0.25)';
+    for(let i=0;i<6;i++){
+      const ix = (i*54 + (time*20)%54);
+      ctx.fillRect(ix % W, H*0.72 + (i%2)*8, 14, 5);
+    }
+  } else if(lvl.theme==='snow'){
+    if(!window.__snow){
+      window.__snow = [];
+      for(let i=0;i<40;i++) window.__snow.push({x:Math.random()*W,y:Math.random()*H,s:0.5+Math.random()});
+    }
+    ctx.fillStyle = '#ffffff';
+    window.__snow.forEach(f=>{
+      f.y += f.s*10*(1/60);
+      f.x += Math.sin(time+f.y)*0.2;
+      if(f.y>H){ f.y=0; f.x=Math.random()*W; }
+      ctx.fillRect(f.x,f.y,1,1);
+    });
+    ctx.fillStyle = '#c9d2da';
+    ctx.fillRect(20,H*0.58,26,14);
+    ctx.fillRect(W-60,H*0.56,30,16);
+  } else if(lvl.theme==='sunset'){
+    ctx.fillStyle = '#2a1f14';
+    ctx.fillRect(W*0.15, H*0.5, 3, H*0.18);
+    ctx.fillRect(W*0.15-6, H*0.5-2, 15, 3);
+    ctx.fillStyle='#d4af37';
+    ctx.fillRect(W*0.15-6, H*0.5-2, 4,3);
+  }
+}
+
+function drawFlag(x,y){
+  ctx.fillStyle = '#5c3a1e';
+  ctx.fillRect(x, y, 2, 20);
+  const wave = Math.sin(time*3)*2;
+  ctx.fillStyle = '#a82027';
+  ctx.fillRect(x+2, y, 14, 8+wave*0.2);
+  ctx.fillStyle = '#28458c';
+  ctx.fillRect(x+2, y, 6, 4);
+}
+
+function drawHUDCanvas(){
+  // fort HP bar
+  const lvl = LEVELS[levelIdx];
+  const barW = 90, barX = W/2-barW/2, barY = 6;
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(barX-2, barY-2, barW+4, 8);
+  ctx.fillStyle = '#4a1010';
+  ctx.fillRect(barX, barY, barW, 4);
+  const pct = Math.max(0,fortHP/fortMax);
+  ctx.fillStyle = pct>0.5?'#5fbf5f':(pct>0.25?'#e0c040':'#d4342a');
+  ctx.fillRect(barX, barY, barW*pct, 4);
+
+  if(boss && (boss.active || boss.entering)){
+    const bW = 140, bX = W/2-bW/2, bY = 16;
+    ctx.fillStyle='#1a1a1a';
+    ctx.fillRect(bX-2,bY-2,bW+4,6);
+    ctx.fillStyle='#7a1010';
+    ctx.fillRect(bX,bY,bW,3);
+    ctx.fillStyle='#d4342a';
+    ctx.fillRect(bX,bY, bW*Math.max(0,boss.hp/boss.maxHP), 3);
+  }
+}
+
+function render(){
+  ctx.save();
+  if(shake>0){
+    ctx.translate((Math.random()-0.5)*shake*8, (Math.random()-0.5)*shake*8);
+  }
+  ctx.clearRect(-10,-10,W+20,H+20);
+  drawBackground();
+
+  if(state==='playing'){
+    // flag decor
+    drawFlag(14, H*0.42);
+
+    // enemies
+    enemies.forEach(e=>{
+      ctx.save();
+      if(e.hitFlash>0){ ctx.globalAlpha = 0.5; }
+      drawSprite(SPR_REDCOAT, e.x-4, e.y-6, 1);
+      ctx.restore();
+    });
+
+    // boss
+    if(boss && (boss.active || boss.entering)){
+      drawSprite(SPR_REDCOAT_BOSS, boss.x-8, boss.y-8, 2);
+    }
+
+    // player
+    const walking = Math.abs((KEY.left?-1:0)+(KEY.right?1:0)) > 0;
+    drawSprite(walking && Math.floor(time*8)%2===0 ? SPR_PATRIOT_WALK : SPR_PATRIOT_STAND, player.x-4, player.y-12, 1);
+
+    // projectiles
+    ctx.fillStyle = '#fff6d8';
+    projectiles.forEach(p=>{ ctx.fillRect(p.x-1,p.y-3,2,5); });
+
+    // particles
+    particles.forEach(pt=>{
+      ctx.globalAlpha = Math.max(0, pt.life/pt.maxLife);
+      ctx.fillStyle = pt.color;
+      ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+      ctx.globalAlpha = 1;
+    });
+
+    // score popups
+    ctx.font = '6px monospace';
+    scorePopups.forEach(s=>{
+      ctx.globalAlpha = Math.max(0, s.life/s.maxLife);
+      ctx.fillStyle = s.color;
+      ctx.fillText(s.text, s.x, s.y);
+      ctx.globalAlpha = 1;
+    });
+
+    drawHUDCanvas();
+  }
+
+  ctx.restore();
+}
+
+/* ============================= HUD DOM ============================= */
+function updateHUDDOM(){
+  if(state==='playing'){
+    const lvl = LEVELS[levelIdx];
+    hud.innerHTML = `
+      <div>SCORE ${String(score).padStart(6,'0')}<br><span style="opacity:.7;font-size:8px">LIVES ${'♥'.repeat(Math.max(0,lives))}</span></div>
+      <div style="text-align:right">${lvl.name}<br><span style="opacity:.7;font-size:8px">${kills}/${lvl.targetKills} ROUTED</span></div>
+    `;
+  } else {
+    hud.innerHTML = '';
+  }
+}
+
+/* ============================= OVERLAY SCREENS ============================= */
+function renderOverlayNone(){
+  overlay.className='';
+  overlay.innerHTML='';
+}
+
+function renderTitle(){
+  state='title';
+  overlay.className='active';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="title-main pixel">GIVE ME BYTE<br>OR GIVE ME DEATH</div>
+      <div class="title-sub">An 8-Bit Chronicle of the American Revolution</div>
+      <div class="credit">Celebrating 250 Years of Independence &middot; 1776&ndash;2026</div>
+      <div style="margin-top:20px;">
+        <button class="btn" id="startBtn">START CAMPAIGN</button>
+      </div>
+      <div class="credit" style="margin-top:14px;font-size:14px;">
+        &larr; &rarr; or A/D to move &nbsp;&middot;&nbsp; SPACE to fire &nbsp;&middot;&nbsp; defend the line, rout the Crown
+      </div>
+      <div class="hint" id="muteHint">MUSIC: ON (click to toggle)</div>
+    </div>
+  `;
+  document.getElementById('startBtn').onclick = ()=>{
+    Audio8.ensure();
+    Audio8.SFX.select();
+    resetGameState();
+    state='storyIntro';
+    renderStory(true);
+  };
+  document.getElementById('muteHint').onclick = (e)=>{
+    e.stopPropagation();
+    const on = Audio8.toggleMusic();
+    document.getElementById('muteHint').textContent = 'MUSIC: '+(on?'ON':'OFF')+' (click to toggle)';
+  };
+  updateHUDDOM();
+}
+
+function renderStory(isIntro){
+  overlay.className='active';
+  const lvl = LEVELS[levelIdx];
+  overlay.innerHTML = `
+    <div class="panel" style="min-width:520px;">
+      <div class="title-sub" style="font-size:18px;margin-bottom:4px;">${lvl.name}</div>
+      <div class="credit" style="margin-bottom:14px;">${lvl.date}</div>
+      <div class="story-text" id="storyText"></div>
+      <div class="hint">PRESS SPACE / ENTER TO CONTINUE</div>
+    </div>
+  `;
+  updateHUDDOM();
+}
+
+function renderGameOver(){
+  overlay.className='active';
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="title-main pixel" style="font-size:22px;color:var(--red-dark);">THE CAUSE IS LOST</div>
+      <div class="story-text" style="text-align:center;">The line has broken. But rebellion is not so easily extinguished.</div>
+      <div class="credit">FINAL SCORE: ${score}</div>
+      <button class="btn" id="retryBtn">TRY AGAIN</button>
+    </div>
+  `;
+  document.getElementById('retryBtn').onclick = ()=>{
+    Audio8.SFX.select();
+    resetGameState();
+    state='storyIntro';
+    renderStory(true);
+  };
+}
+
+function renderVictory(){
+  overlay.className='active';
+  state='victory';
+  Audio8.stopMusic();
+  Audio8.startMusic('victory', 0.14);
+  overlay.innerHTML = `
+    <div class="panel">
+      <div class="title-main pixel" style="font-size:22px;">INDEPENDENCE WON</div>
+      <div class="story-text" style="text-align:center;">
+        From Lexington's green to Yorktown's field, a new nation has forged itself in fire.
+        <br><br>
+        Two hundred fifty years later, the story still begins the same way it did in 1776&mdash;
+        with ordinary people, refusing to stand down.
+      </div>
+      <div class="credit">FINAL SCORE: ${score}</div>
+      <button class="btn" id="againBtn">PLAY AGAIN</button>
+    </div>
+  `;
+  document.getElementById('againBtn').onclick = ()=>{
+    Audio8.SFX.select();
+    resetGameState();
+    state='storyIntro';
+    renderStory(true);
+  };
+  // fireworks
+  victoryParticles = [];
+  for(let i=0;i<8;i++) spawnFirework();
+}
+let victoryParticles = [];
+function spawnFirework(){
+  const cx = 20+Math.random()*(W-40), cy = 20+Math.random()*(H*0.5);
+  const colors = ['#ff6b6b','#7fdbff','#ffe066','#a5f3a5','#ffffff'];
+  const c = colors[Math.floor(Math.random()*colors.length)];
+  for(let i=0;i<18;i++){
+    const ang = (i/18)*Math.PI*2;
+    victoryParticles.push({x:cx,y:cy,vx:Math.cos(ang)*40,vy:Math.sin(ang)*40,life:0.9,maxLife:0.9,color:c});
+  }
+}
+
+/* typewriter for story */
+function updateStory(dt){
+  storyCharTimer -= dt;
+  if(storyCharIdx < storyTextFull.length && storyCharTimer<=0){
+    storyCharIdx++;
+    storyTextShown = storyTextFull.slice(0, storyCharIdx);
+    storyCharTimer = 0.018;
+    const el = document.getElementById('storyText');
+    if(el) el.textContent = storyTextShown;
+    if(storyCharIdx % 3 === 0) Audio8.SFX.reload();
+  }
+}
+
+/* ============================= FIREWORKS RENDER (victory) ============================= */
+function renderVictoryFireworksFrame(dt){
+  ctx.clearRect(0,0,W,H);
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0a0a1a'); g.addColorStop(1,'#241a2a');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#241a10';
+  ctx.fillRect(0,H*0.8,W,H*0.2);
+  for(let i=victoryParticles.length-1;i>=0;i--){
+    const p = victoryParticles[i];
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy += 30*dt; p.life -= dt;
+    if(p.life<=0){ victoryParticles.splice(i,1); continue; }
+    ctx.globalAlpha = Math.max(0,p.life/p.maxLife);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x,p.y,2,2);
+    ctx.globalAlpha=1;
+  }
+  if(Math.random()<0.03) spawnFirework();
+  drawFlag(W/2-8, H*0.55);
+}
+
+/* ============================= INPUT ============================= */
+window.addEventListener('keydown', (e)=>{
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') KEY.left = true;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') KEY.right = true;
+  if(e.key===' '||e.key==='Spacebar') { KEY.fire = true; handleContinue(); }
+  if(e.key==='Enter') handleContinue();
+});
+window.addEventListener('keyup', (e)=>{
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') KEY.left = false;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') KEY.right = false;
+  if(e.key===' '||e.key==='Spacebar') KEY.fire = false;
+});
+stage.addEventListener('click', ()=>{ stage.focus(); Audio8.ensure(); });
+
+function handleContinue(){
+  if(state==='storyIntro'){
+    if(storyCharIdx < storyTextFull.length){
+      storyCharIdx = storyTextFull.length;
+      storyTextShown = storyTextFull;
+      const el = document.getElementById('storyText');
+      if(el) el.textContent = storyTextShown;
+      return;
+    }
+    beginLevel();
+  } else if(state==='storyOutro'){
+    if(storyCharIdx < storyTextFull.length){
+      storyCharIdx = storyTextFull.length;
+      storyTextShown = storyTextFull;
+      const el = document.getElementById('storyText');
+      if(el) el.textContent = storyTextShown;
+      return;
+    }
+    levelIdx++;
+    if(levelIdx >= LEVELS.length){
+      renderVictory();
+    } else {
+      state='storyIntro';
+      storyTextForLevel(true);
+      renderStory(true);
+    }
+  }
+}
+
+/* ============================= MAIN LOOP ============================= */
+let lastT = performance.now();
+function loop(now){
+  const dt = Math.min(0.05, (now-lastT)/1000);
+  lastT = now;
+
+  if(state==='storyIntro' || state==='storyOutro'){
+    updateStory(dt);
+  } else if(state==='playing'){
+    update(dt);
+    render();
+  } else if(state==='victory'){
+    renderVictoryFireworksFrame(dt);
+  }
+  updateHUDDOM();
+  requestAnimationFrame(loop);
+}
+
+renderTitle();
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>

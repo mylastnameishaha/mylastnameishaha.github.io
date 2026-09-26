@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KitchenGhost — / waste less, eat better</title>
+<meta name="description" content="Dump your sad ingredients below. KitchenGhost turns fridge chaos into three real meals — fast, creative, or fully stocked.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --char:   #0e0e0d;
+    --cream:  #f5f0e8;
+    --acid:   #d4f23d;
+    --rust:   #e8602c;
+    --stone:  #c8c2b4;
+    --ink:    #1a1a18;
+    --border: 2px solid var(--char);
+  }
+
+  body {
+    background: var(--cream);
+    color: var(--char);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: .6;
+  }
+
+  .kg-root { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── NAV ── */
+  .nav {
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: var(--border);
+    background: var(--cream);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; letter-spacing: -.3px; }
+  .nav-logo span { opacity: .45; font-style: italic; font-weight: 400; }
+  .nav-logo svg { flex-shrink: 0; }
+  .nav-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    background: var(--char); color: var(--acid);
+    padding: 3px 8px; text-transform: uppercase;
+  }
+
+  /* ── HERO ── */
+  .hero { padding: 72px 28px 56px; max-width: 900px; margin: 0 auto; width: 100%; }
+  .hero-eyebrow {
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    opacity: .5; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hero-eyebrow::before { content: ''; display: block; width: 32px; height: 1px; background: currentColor; }
+  .hero-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(52px, 9vw, 108px);
+    line-height: .92;
+    letter-spacing: -.03em;
+    margin-bottom: 28px;
+  }
+  .hero-title em { font-style: italic; color: var(--rust); }
+  .hero-sub { font-size: 14px; line-height: 1.7; max-width: 440px; opacity: .6; }
+
+  /* ── INPUT ZONE ── */
+  .input-zone { padding: 0 28px 80px; max-width: 900px; margin: 0 auto; width: 100%; }
+  .input-card {
+    border: var(--border);
+    background: var(--char);
+    color: var(--cream);
+    position: relative;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .input-card:focus-within { transform: translate(-3px, -3px); box-shadow: 6px 6px 0 var(--acid); }
+  .input-label {
+    padding: 14px 20px 0;
+    font-size: 10px; letter-spacing: .15em; text-transform: uppercase;
+    opacity: .45;
+  }
+  .chaos-textarea {
+    width: 100%;
+    min-height: 160px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--cream);
+    padding: 12px 20px 20px;
+    caret-color: var(--acid);
+  }
+  .chaos-textarea::placeholder { color: rgba(245,240,232,.25); font-style: italic; }
+  .input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-top: 1px solid rgba(245,240,232,.12);
+  }
+  .input-hint { font-size: 11px; opacity: .35; font-style: italic; }
+  .alchemize-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--acid);
+    color: var(--char);
+    border: 2px solid var(--acid);
+    padding: 10px 22px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+    cursor: pointer;
+    transition: all .12s ease;
+    white-space: nowrap;
+  }
+  .alchemize-btn:hover:not(:disabled) { background: var(--cream); border-color: var(--cream); }
+  .alchemize-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .alchemize-btn svg { flex-shrink: 0; }
+
+  /* ── LOADING ── */
+  .loading-state { padding: 0 28px 80px; max-width: 900px; margin: 0 auto; width: 100%; }
+  .loading-inner {
+    border: var(--border);
+    background: var(--ink);
+    padding: 56px 32px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 24px;
+    text-align: center;
+  }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-family: 'Instrument Serif', serif; font-size: 28px; font-style: italic; color: var(--cream); }
+  .loading-sub { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--stone); margin-top: -12px; }
+  .loading-dots span { display: inline-block; animation: blink 1.4s infinite; color: var(--acid); font-size: 20px; }
+  .loading-dots span:nth-child(2) { animation-delay: .2s; }
+  .loading-dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100% { opacity: .15; } 40% { opacity: 1; } }
+
+  /* ── RESULTS ── */
+  .results-zone {
+    padding: 0 28px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    animation: fadeUp .5s ease both;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  .results-header {
+    display: flex; align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .results-title { font-family: 'Instrument Serif', serif; font-size: 28px; font-style: italic; }
+  .reset-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    background: none; border: var(--border);
+    padding: 7px 14px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all .12s;
+  }
+  .reset-btn:hover { background: var(--char); color: var(--cream); }
+  .reset-btn svg { flex-shrink: 0; }
+
+  .cards-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+  /* ── RECIPE CARD ── */
+  .recipe-card {
+    border: var(--border);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+    animation: fadeUp .5s ease both;
+  }
+  .recipe-card:nth-child(1) { animation-delay: .05s; }
+  .recipe-card:nth-child(2) { animation-delay: .12s; }
+  .recipe-card:nth-child(3) { animation-delay: .19s; }
+  .recipe-card:hover { transform: translate(-4px, -4px); }
+  .recipe-card.card-quick { background: var(--char); color: var(--cream); }
+  .recipe-card.card-quick:hover { box-shadow: 6px 6px 0 var(--acid); }
+  .recipe-card.card-chef  { background: var(--rust); color: var(--cream); }
+  .recipe-card.card-chef:hover  { box-shadow: 6px 6px 0 var(--char); }
+  .recipe-card.card-pantry { background: var(--cream); color: var(--char); }
+  .recipe-card.card-pantry:hover { box-shadow: 6px 6px 0 var(--rust); }
+
+  .card-header {
+    padding: 22px 24px 0;
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 12px;
+  }
+  .card-tag {
+    font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+    font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card-tag svg { flex-shrink: 0; }
+  .card-quick .card-tag  { color: var(--acid); }
+  .card-chef  .card-tag  { color: rgba(245,240,232,.75); }
+  .card-pantry .card-tag { color: var(--rust); }
+  .card-time { font-size: 11px; opacity: .5; white-space: nowrap; }
+
+  .card-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(22px, 4vw, 32px);
+    line-height: 1.05;
+    padding: 12px 24px 0;
+    letter-spacing: -.02em;
+  }
+  .card-body { padding: 14px 24px 20px; font-size: 13px; line-height: 1.65; opacity: .75; }
+  .card-ingredients { padding: 0 24px 22px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ingredient-pill { font-size: 10px; letter-spacing: .06em; padding: 4px 10px; font-weight: 700; text-transform: uppercase; }
+  .card-quick .ingredient-pill  { background: rgba(212,242,61,.15); border: 1px solid rgba(212,242,61,.3); color: var(--acid); }
+  .card-chef  .ingredient-pill  { background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.2); color: var(--cream); }
+  .card-pantry .ingredient-pill { background: rgba(14,14,13,.06); border: 1px solid rgba(14,14,13,.2); color: var(--char); }
+  .card-footer {
+    padding: 14px 24px;
+    border-top: 1px solid rgba(128,128,128,.2);
+    font-size: 11px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card-footer svg { flex-shrink: 0; }
+  .card-quick .card-footer  { color: rgba(212,242,61,.6); }
+  .card-chef  .card-footer  { color: rgba(245,240,232,.5); }
+  .card-pantry .card-footer { color: rgba(14,14,13,.4); }
+
+  /* ── EXPANDED CARD OVERLAY ── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(14,14,13,.8);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: flex; align-items: flex-end;
+    animation: fadeIn .2s ease;
+  }
+  .overlay[hidden] { display: none; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .overlay-card { width: 100%; max-height: 88vh; overflow-y: auto; animation: slideUp .3s cubic-bezier(.22,1,.36,1); }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .overlay-inner { padding: 32px 28px 48px; max-width: 720px; margin: 0 auto; }
+  .overlay-close { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+  .close-btn {
+    background: none; border: var(--border);
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .12s;
+  }
+  .close-btn:hover { background: var(--char); }
+  .close-btn svg { flex-shrink: 0; }
+  .overlay-tag {
+    font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+    font-weight: 700; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .overlay-tag svg { flex-shrink: 0; }
+  .overlay-title { font-family: 'Instrument Serif', serif; font-size: clamp(32px, 6vw, 52px); line-height: .95; letter-spacing: -.03em; margin-bottom: 24px; }
+  .overlay-section-label { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; opacity: .45; margin-bottom: 12px; margin-top: 28px; }
+  .overlay-ingredients { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+  .overlay-pill { font-size: 11px; font-weight: 700; padding: 5px 12px; letter-spacing: .04em; border: var(--border); }
+  .overlay-steps { display: flex; flex-direction: column; gap: 16px; }
+  .overlay-step { display: flex; gap: 16px; align-items: flex-start; }
+  .step-num {
+    font-size: 11px; font-weight: 700;
+    min-width: 28px; height: 28px;
+    background: var(--char); color: var(--cream);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .step-text { font-size: 14px; line-height: 1.65; padding-top: 4px; }
+  .overlay-tip {
+    margin-top: 28px;
+    padding: 16px 20px;
+    border: var(--border);
+    font-size: 13px; line-height: 1.6;
+    font-style: italic;
+    background: rgba(212,242,61,.1);
+    border-color: var(--acid);
+  }
+
+  .view-hidden { display: none !important; }
+
+  /* ── FOOTER ── */
+  .footer {
+    margin-top: auto;
+    border-top: var(--border);
+    padding: 18px 28px;
+    font-size: 11px; opacity: .35;
+    display: flex; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+  }
+
+  /* ── ERROR ── */
+  .error-box {
+    max-width: 900px;
+    margin: 0 auto 28px;
+    border: 2px solid var(--rust);
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--rust);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .error-box .view-hidden { display: none; }
+  .error-box svg { flex-shrink: 0; margin-top: 1px; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--cream); }
+  ::-webkit-scrollbar-thumb { background: var(--stone); }
+
+  @media (min-width: 640px) {
+    .cards-grid { grid-template-columns: 1fr 1fr; }
+    .recipe-card:nth-child(1) { grid-column: 1 / -1; }
+  }
+  @media (min-width: 960px) {
+    .cards-grid { grid-template-columns: 1fr 1fr 1fr; }
+    .recipe-card:nth-child(1) { grid-column: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="kg-root">
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></svg>
+      KitchenGhost
+      <span>/ waste less, eat better</span>
+    </div>
+    <div class="nav-badge">Beta</div>
+  </nav>
+
+  <!-- ERROR -->
+  <div class="error-box view-hidden" id="errorBox">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8602c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    <span id="errorText"></span>
+  </div>
+
+  <!-- HERO + INPUT (idle view) -->
+  <div id="idleView">
+    <section class="hero">
+      <div class="hero-eyebrow">Chaos → Cuisine</div>
+      <h1 class="hero-title">What's rotting<br>in your <em>fridge?</em></h1>
+      <p class="hero-sub">
+        Dump your sad ingredients below. KitchenGhost turns fridge chaos into
+        three real meals — fast, creative, or fully stocked.
+      </p>
+    </section>
+
+    <div class="input-zone">
+      <div class="input-card">
+        <div class="input-label">// your chaos</div>
+        <textarea id="chaosInput" class="chaos-textarea" rows="6" autofocus
+          placeholder="half a lime, wilted spinach, 3 eggs, that mystery jar,&#10;soy sauce, leftover rice, questionable cheese..."></textarea>
+        <div class="input-footer">
+          <span class="input-hint">⌘↵ to run</span>
+          <button id="alchemizeBtn" class="alchemize-btn" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+            Alchemize
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loadingView" class="loading-state view-hidden">
+    <div class="loading-inner">
+      <div class="spin" style="color:#d4f23d">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d4f23d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      </div>
+      <div class="loading-text">Consulting the ghost<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></div>
+      <div class="loading-sub">Transmuting ingredients into meals</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsView" class="results-zone view-hidden">
+    <div class="results-header">
+      <div class="results-title">Three paths from your chaos →</div>
+      <button id="resetBtn" class="reset-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        New list
+      </button>
+    </div>
+    <div id="cardsGrid" class="cards-grid"></div>
+  </div>
+
+  <!-- OVERLAY -->
+  <div id="overlay" class="overlay" hidden>
+    <div class="overlay-card">
+      <div class="overlay-inner">
+        <div class="overlay-close">
+          <button id="overlayCloseBtn" class="close-btn" aria-label="Close recipe">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div id="overlayTag" class="overlay-tag"></div>
+        <div id="overlayTitle" class="overlay-title"></div>
+        <div class="overlay-section-label">Ingredients</div>
+        <div id="overlayIngredients" class="overlay-ingredients"></div>
+        <div class="overlay-section-label">Method</div>
+        <div id="overlaySteps" class="overlay-steps"></div>
+        <div id="overlayTip" class="overlay-tip" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span>KitchenGhost © 2026</span>
+    <span>Powered by Claude · Zero waste, maximum flavour</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+
+  var ICONS = {
+    zap:    "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+    chef:   "M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6zM6 17h12",
+    basket: "M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0",
+    arrow:  "M5 12h14M12 5l7 7-7 7"
+  };
+
+  function iconPath(d, size, attrs) {
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('width', size);
+    svg.setAttribute('height', size);
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', attrs.stroke || 'currentColor');
+    svg.setAttribute('stroke-width', attrs.strokeWidth || '1.8');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    var p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('d', d);
+    svg.appendChild(p);
+    return svg;
+  }
+
+  var CARD_META = [
+    { key: "quick",  cls: "card-quick",  iconKey: "zap",    label: "Quick Fix",   tagColor: "#d4f23d" },
+    { key: "chef",   cls: "card-chef",   iconKey: "chef",   label: "Chef's Save", tagColor: "rgba(245,240,232,.8)" },
+    { key: "pantry", cls: "card-pantry", iconKey: "basket", label: "Pantry Fill", tagColor: "#e8602c" }
+  ];
+
+  // ── DOM refs ──
+  var idleView   = document.getElementById('idleView');
+  var loadingView = document.getElementById('loadingView');
+  var resultsView = document.getElementById('resultsView');
+  var cardsGrid  = document.getElementById('cardsGrid');
+  var errorBox   = document.getElementById('errorBox');
+  var errorText  = document.getElementById('errorText');
+  var input      = document.getElementById('chaosInput');
+  var alchemizeBtn = document.getElementById('alchemizeBtn');
+  var resetBtn   = document.getElementById('resetBtn');
+  var overlay    = document.getElementById('overlay');
+  var overlayCloseBtn = document.getElementById('overlayCloseBtn');
+  var overlayTag = document.getElementById('overlayTag');
+  var overlayTitle = document.getElementById('overlayTitle');
+  var overlayIngredients = document.getElementById('overlayIngredients');
+  var overlaySteps = document.getElementById('overlaySteps');
+  var overlayTip = document.getElementById('overlayTip');
+
+  function showError(msg) {
+    errorText.textContent = msg;
+    errorBox.classList.remove('view-hidden');
+  }
+  function hideError() {
+    errorBox.classList.add('view-hidden');
+  }
+
+  function setView(view) {
+    idleView.classList.toggle('view-hidden', view !== 'idle');
+    loadingView.classList.toggle('view-hidden', view !== 'loading');
+    resultsView.classList.toggle('view-hidden', view !== 'results');
+  }
+
+  function updateButton() {
+    alchemizeBtn.disabled = !input.value.trim();
+  }
+  input.addEventListener('input', updateButton);
+
+  alchemizeBtn.addEventListener('click', function () { alchemize(); });
+  resetBtn.addEventListener('click', reset);
+  overlayCloseBtn.addEventListener('click', function () { overlay.hidden = true; });
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) overlay.hidden = true;
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) alchemize();
+  });
+
+  // disable autofocus reflow side-effects: keep cursor happy in textarea
+  input.focus();
+
+  var recipes = null;
+
+  function reset() {
+    setView('idle');
+    recipes = null;
+    input.value = '';
+    updateButton();
+    setTimeout(function () { input.focus(); }, 50);
+  }
+
+  function alchemize() {
+    if (!input.value.trim()) return;
+    hideError();
+    setView('loading');
+
+    var systemPrompt = [
+      'You are KitchenGhost — a brilliant kitchen alchemist. Given a messy list of ingredients, you create exactly 3 distinct meal ideas.',
+      '',
+      'Respond ONLY with valid JSON (no markdown, no backticks) matching this schema:',
+      '{',
+      '  "quick": {',
+      '    "title": "string",',
+      '    "tagline": "string (≤12 words, witty)",',
+      '    "time": "string e.g. \'8 mins\'",',
+      '    "ingredients": ["string", ...],',
+      '    "steps": ["string", ...],',
+      '    "tip": "string (1 clever tip)"',
+      '  },',
+      '  "chef": { same structure },',
+      '  "pantry": {',
+      '    same structure plus:',
+      '    "staples": ["1-2 items to buy"]',
+      '  }',
+      '}',
+      '',
+      'Rules:',
+      '- quick: Under 10 minutes, minimal effort, no fancy technique',
+      '- chef: Creative use of scraps, restaurant-worthy result, max 25 mins',
+      '- pantry: Adds 1-2 pantry staples to make it feel like a full satisfying meal',
+      '- steps: 3-5 clear steps each',
+      '- ingredients: only the ones actually used from the input (+ staples for pantry)',
+      '- Be specific, bold, slightly irreverent in tone'
+    ].join('\n');
+
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: 'My ingredients: ' + input.value }]
+      })
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      var content = data && data.content;
+      var raw = '';
+      if (Array.isArray(content)) {
+        for (var i = 0; i < content.length; i++) {
+          if (content[i].type === 'text') { raw = content[i].text; break; }
+        }
+      }
+      var clean = raw.replace(/```json|```/g, '').trim();
+      recipes = JSON.parse(clean);
+      renderResults();
+      setView('results');
+    })
+    .catch(function () {
+      showError('The alchemy failed. Check your ingredients and try again.');
+      setView('idle');
+    });
+  }
+
+  function renderResults() {
+    cardsGrid.innerHTML = '';
+    CARD_META.forEach(function (meta) {
+      var r = recipes[meta.key];
+      if (!r) return;
+
+      var card = document.createElement('div');
+      card.className = 'recipe-card ' + meta.cls;
+
+      // header
+      var header = document.createElement('div');
+      header.className = 'card-header';
+      var tag = document.createElement('div');
+      tag.className = 'card-tag';
+      tag.style.color = meta.tagColor;
+      tag.appendChild(iconPath(ICONS[meta.iconKey], 13, { stroke: meta.tagColor, strokeWidth: 2 }));
+      tag.appendChild(document.createTextNode(meta.label));
+      var time = document.createElement('div');
+      time.className = 'card-time';
+      time.textContent = r.time;
+      header.appendChild(tag); header.appendChild(time);
+
+      var title = document.createElement('div');
+      title.className = 'card-title';
+      title.textContent = r.title;
+
+      var body = document.createElement('div');
+      body.className = 'card-body';
+      body.textContent = r.tagline;
+
+      var ing = document.createElement('div');
+      ing.className = 'card-ingredients';
+      (r.ingredients || []).slice(0, 4).forEach(function (it) {
+        var pill = document.createElement('span');
+        pill.className = 'ingredient-pill';
+        pill.textContent = it;
+        ing.appendChild(pill);
+      });
+      if (r.ingredients && r.ingredients.length > 4) {
+        var more = document.createElement('span');
+        more.className = 'ingredient-pill';
+        more.textContent = '+' + (r.ingredients.length - 4);
+        ing.appendChild(more);
+      }
+
+      var footer = document.createElement('div');
+      footer.className = 'card-footer';
+      footer.appendChild(iconPath(ICONS.arrow, 12, {}));
+      footer.appendChild(document.createTextNode('Tap for full recipe'));
+
+      card.appendChild(header); card.appendChild(title); card.appendChild(body); card.appendChild(ing); card.appendChild(footer);
+
+      card.addEventListener('click', function () { openOverlay(meta.key); });
+      cardsGrid.appendChild(card);
+    });
+  }
+
+  function openOverlay(key) {
+    var meta = CARD_META.find(function (m) { return m.key === key; });
+    var r = recipes[key];
+    if (!meta || !r) return;
+
+    var bg, fg, border, stepBg, stepFg;
+    if (key === 'quick')      { bg = '#0e0e0d'; fg = '#f5f0e8'; border = '2px solid ' + fg + '33'; stepBg = fg; stepFg = bg; }
+    else if (key === 'chef')  { bg = '#e8602c'; fg = '#f5f0e8'; border = '2px solid ' + fg + '33'; stepBg = fg; stepFg = bg; }
+    else                      { bg = '#f5f0e8'; fg = '#0e0e0d'; border = '2px solid ' + fg;         stepBg = bg; stepFg = fg; }
+
+    var card = overlay.querySelector('.overlay-card');
+    card.style.background = bg;
+    card.style.color = fg;
+
+    var closeBtn = overlayCloseBtn;
+    closeBtn.style.border = border;
+    closeBtn.style.color = fg;
+
+    overlayTag.innerHTML = '';
+    overlayTag.style.color = meta.tagColor;
+    overlayTag.appendChild(iconPath(ICONS[meta.iconKey], 14, { stroke: meta.tagColor, strokeWidth: 2 }));
+    overlayTag.appendChild(document.createTextNode(meta.label + ' · ' + r.time));
+
+    overlayTitle.textContent = r.title;
+
+    overlayIngredients.innerHTML = '';
+    (r.ingredients || []).forEach(function (ing) {
+      var pill = document.createElement('span');
+      pill.className = 'overlay-pill';
+      pill.style.border = border;
+      pill.style.color = fg;
+      pill.style.fontSize = '11px';
+      pill.style.fontWeight = '700';
+      pill.style.padding = '5px 12px';
+      pill.style.letterSpacing = '.04em';
+      pill.textContent = ing;
+      overlayIngredients.appendChild(pill);
+    });
+    (r.staples || []).forEach(function (s) {
+      var pill = document.createElement('span');
+      pill.className = 'overlay-pill';
+      pill.style.background = '#d4f23d';
+      pill.style.border = '2px solid #d4f23d';
+      pill.style.color = '#0e0e0d';
+      pill.style.fontSize = '11px';
+      pill.style.fontWeight = '700';
+      pill.style.padding = '5px 12px';
+      pill.style.letterSpacing = '.04em';
+      pill.textContent = '+ ' + s;
+      overlayIngredients.appendChild(pill);
+    });
+
+    overlaySteps.innerHTML = '';
+    (r.steps || []).forEach(function (step, i) {
+      var row = document.createElement('div');
+      row.className = 'overlay-step';
+      var num = document.createElement('div');
+      num.className = 'step-num';
+      num.style.background = stepBg;
+      num.style.color = stepFg;
+      num.textContent = String(i + 1);
+      var text = document.createElement('div');
+      text.className = 'step-text';
+      text.textContent = step;
+      row.appendChild(num); row.appendChild(text);
+      overlaySteps.appendChild(row);
+    });
+
+    if (r.tip) {
+      overlayTip.style.display = 'block';
+      overlayTip.style.borderColor = '#d4f23d';
+      overlayTip.style.background = key === 'pantry' ? 'rgba(212,242,61,.12)' : 'rgba(212,242,61,.08)';
+      overlayTip.innerHTML = '';
+      var strong = document.createElement('strong');
+      strong.style.color = '#d4f23d';
+      strong.style.fontStyle = 'normal';
+      strong.textContent = 'Ghost tip: ';
+      overlayTip.appendChild(strong);
+      overlayTip.appendChild(document.createTextNode(r.tip));
+    } else {
+      overlayTip.style.display = 'none';
+    }
+
+    overlay.hidden = false;
+  }
+})();
+</script>
+</body>
+</html>

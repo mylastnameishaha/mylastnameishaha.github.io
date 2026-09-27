@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build Your Own Media & Storage Server</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #1a1d24;
+    --border: #2a2d35;
+    --accent: #00e5ff;
+    --accent2: #7b61ff;
+    --accent3: #ff6b35;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --green: #00d68f;
+    --yellow: #ffd60a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 60px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .header-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 560px;
+    font-weight: 300;
+  }
+
+  /* Phase progress */
+  .phase-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+  }
+
+  .phase-dot {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+  }
+
+  .phase-dot:hover, .phase-dot.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,229,255,0.06);
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 56px;
+    opacity: 0;
+    transform: translateY(24px);
+    animation: fadeUp 0.5s forwards;
+  }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section:nth-child(1) { animation-delay: 0.05s; }
+  .section:nth-child(2) { animation-delay: 0.1s; }
+  .section:nth-child(3) { animation-delay: 0.15s; }
+  .section:nth-child(4) { animation-delay: 0.2s; }
+  .section:nth-child(5) { animation-delay: 0.25s; }
+  .section:nth-child(6) { animation-delay: 0.3s; }
+  .section:nth-child(7) { animation-delay: 0.35s; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    cursor: pointer;
+  }
+
+  .step-num {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .step-num.cyan { background: rgba(0,229,255,0.12); color: var(--accent); border: 1px solid rgba(0,229,255,0.2); }
+  .step-num.purple { background: rgba(123,97,255,0.12); color: var(--accent2); border: 1px solid rgba(123,97,255,0.2); }
+  .step-num.orange { background: rgba(255,107,53,0.12); color: var(--accent3); border: 1px solid rgba(255,107,53,0.2); }
+  .step-num.green { background: rgba(0,214,143,0.12); color: var(--green); border: 1px solid rgba(0,214,143,0.2); }
+  .step-num.yellow { background: rgba(255,214,10,0.12); color: var(--yellow); border: 1px solid rgba(255,214,10,0.2); }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .section-title small {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    margin-top: 2px;
+  }
+
+  .toggle-icon {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 18px;
+    transition: transform 0.25s;
+  }
+
+  .section.collapsed .toggle-icon { transform: rotate(-90deg); }
+
+  .section-body {
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+    max-height: 2000px;
+  }
+
+  .section.collapsed .section-body { max-height: 0; }
+
+  /* Cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: rgba(0,229,255,0.3); }
+
+  .card-icon { font-size: 22px; margin-bottom: 10px; }
+  .card-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+  .card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+  .card-tag {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(0,229,255,0.08);
+    color: var(--accent);
+  }
+
+  /* Steps list */
+  .steps-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .steps-list li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+
+  .steps-list li:hover { border-color: rgba(0,229,255,0.25); }
+
+  .step-marker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 2px;
+    flex-shrink: 0;
+    min-width: 28px;
+  }
+
+  .step-content strong {
+    display: block;
+    font-size: 0.88rem;
+    margin-bottom: 4px;
+  }
+
+  .step-content p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* Code block */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #a5d6ff;
+    margin: 16px 0;
+    overflow-x: auto;
+    line-height: 1.8;
+    position: relative;
+  }
+
+  .code-block .comment { color: #484f58; }
+  .code-block .cmd { color: var(--accent); }
+  .code-block .val { color: #f0883e; }
+
+  /* Comparison table */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-bottom: 16px;
+  }
+
+  .compare-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .compare-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(42,45,53,0.6);
+    vertical-align: top;
+  }
+
+  .compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .badge.good { background: rgba(0,214,143,0.12); color: var(--green); }
+  .badge.mid { background: rgba(255,214,10,0.12); color: var(--yellow); }
+  .badge.low { background: rgba(255,107,53,0.12); color: var(--accent3); }
+
+  /* Callout */
+  .callout {
+    border-left: 3px solid var(--accent);
+    padding: 14px 18px;
+    background: rgba(0,229,255,0.04);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: 16px 0;
+  }
+
+  .callout strong { color: var(--text); }
+
+  .callout.warning { border-color: var(--yellow); background: rgba(255,214,10,0.04); }
+  .callout.tip { border-color: var(--green); background: rgba(0,214,143,0.04); }
+
+  /* Software pills */
+  .pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  .pill {
+    padding: 5px 14px;
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-family: 'IBM Plex Mono', monospace;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .pill:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Checklist */
+  .checklist {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.85rem;
+  }
+
+  .check-box {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-size: 11px;
+  }
+
+  .check-box.checked {
+    background: var(--green);
+    border-color: var(--green);
+    color: #000;
+  }
+
+  footer {
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: gap;
+  }
+
+  footer p {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="header-tag">// DIY Infrastructure Guide</div>
+    <h1>Build a <span>Media &</span><br>Storage Server</h1>
+    <p class="subtitle">A complete step-by-step guide — from hardware selection to running Plex, Jellyfin, and automated media management at home.</p>
+  </header>
+
+  <div class="phase-nav">
+    <div class="phase-dot active">01 Planning</div>
+    <div class="phase-dot">02 Hardware</div>
+    <div class="phase-dot">03 OS Setup</div>
+    <div class="phase-dot">04 Storage</div>
+    <div class="phase-dot">05 Media Stack</div>
+    <div class="phase-dot">06 Remote Access</div>
+    <div class="phase-dot">07 Maintenance</div>
+  </div>
+
+  <div id="guide">
+
+    <!-- STEP 1 -->
+    <div class="section" id="s1">
+      <div class="section-header" onclick="toggleSection('s1')">
+        <div class="step-num cyan">01</div>
+        <div class="section-title">Planning & Use Case<small>Define what you're building before buying anything</small></div>
+        <div class="toggle-icon">▾</div>
+      </div>
+      <div class="section-body">
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-icon">🎬</div>
+            <div class="card-title">Media Server</div>
+            <div class="card-desc">Stream movies, TV shows, and music to any device on your network (or internet).</div>
+            <div class="card-tag">Plex / Jellyfin</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">💾</div>
+            <div class="card-title">NAS / File Storage</div>
+            <div class="card-desc">Centralized file storage, backups, photo libraries, and document sync.</div>
+            <div class="card-tag">Samba / NFS</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">🔄</div>
+            <div class="card-title">Download Automation</div>
+            <div class="card-desc">Automated content acquisition via Sonarr, Radarr, and torrent/Usenet clients.</div>
+            <div class="card-tag">*arr Stack</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">☁️</div>
+            <div class="card-title">Backup Server</div>
+            <div class="card-desc">Offsite-style local backups with Restic, Duplicati, or rsync for all machines.</div>
+            <div class="card-tag">3-2-1 Rule</div>
+          </div>
+        </div>
+        <div class="callout">
+          <strong>Key Questions:</strong> How many simultaneous streams? Transcoding or direct play only? Local-only or remote access? What's your budget for drives?
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="section" id="s2">
+      <div class="section-header" onclick="toggleSection('s2')">
+        <div class="step-num purple">02</div>
+        <div class="section-title">Hardware Selection<small>Choose your platform — new build, repurposed PC, or NAS device</small></div>
+        <div class="toggle-icon">▾</div>
+      </div>
+      <div class="section-body">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Cost</th>
+              <th>Performance</th>
+              <th>Power Use</th>
+              <th>Best For</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Old PC / Desktop</strong></td>
+              <td><span class="badge good">$0–$50</span></td>
+              <td><span class="badge good">High</span></td>
+              <td><span class="badge low">80–150W</span></td>
+              <td>Getting started fast</td>
+            </tr>
+            <tr>
+              <td><strong>Mini PC (N100/N305)</strong></td>
+              <td><span class="badge mid">$150–$300</span></td>
+              <td><span class="badge mid">Medium</span></td>
+              <td><span class="badge good">10–20W</span></td>
+              <td>Low power, always-on</td>
+            </tr>
+            <tr>
+              <td><strong>Dedicated NAS (Synology)</strong></td>
+              <td><span class="badge low">$300–$700+</span></td>
+              <td><span class="badge mid">Medium</span></td>
+              <td><span class="badge good">15–30W</span></td>
+              <td>Ease of use, reliability</td>
+            </tr>
+            <tr>
+              <td><strong>Custom ITX Build</strong></td>
+              <td><span class="badge low">$400–$800</span></td>
+              <td><span class="badge good">Very High</span></td>
+              <td><span class="badge mid">40–80W</span></td>
+              <td>Max expandability</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout tip">
+          <strong>Tip:</strong> For hardware transcoding (H.264/HEVC without CPU burn), look for Intel Quick Sync via an Intel N-series or Core CPU with iGPU. This drastically reduces power draw during streaming.
+        </div>
+
+        <ul class="steps-list">
+          <li>
+            <span class="step-marker">RAM</span>
+            <div class="step-content">
+              <strong>Memory: 8GB minimum, 16GB recommended</strong>
+              <p>If running Docker containers for the full *arr stack + media server, 16GB is comfortable. ECC RAM is ideal but not required for home use.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">CPU</span>
+            <div class="step-content">
+              <strong>Processor: Intel N100 / N305 or Ryzen 5xxx series</strong>
+              <p>Intel N-series offer excellent iGPU transcoding at very low wattage. Avoid AMD for transcoding unless using a dedicated GPU.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">HDD</span>
+            <div class="step-content">
+              <strong>Storage: 2+ HDDs for redundancy</strong>
+              <p>NAS-rated drives (WD Red, Seagate IronWolf) are rated for 24/7 operation. Start with 2×4TB and expand. Use an SSD for the OS.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="section" id="s3">
+      <div class="section-header" onclick="toggleSection('s3')">
+        <div class="step-num orange">03</div>
+        <div class="section-title">Operating System Setup<small>Install and harden your server OS</small></div>
+        <div class="toggle-icon">▾</div>
+      </div>
+      <div class="section-body">
+        <p style="font-size:0.85rem; color: var(--muted); margin-bottom: 16px;">Choose your OS based on your comfort level and goals:</p>
+        <div class="pill-list">
+          <div class="pill">Ubuntu Server 24.04 LTS ⭐</div>
+          <div class="pill">Debian 12</div>
+          <div class="pill">TrueNAS Scale</div>
+          <div class="pill">Unraid</div>
+          <div class="pill">OpenMediaVault</div>
+          <div class="pill">Proxmox VE</div>
+        </div>
+
+        <div class="callout">
+          <strong>Recommendation:</strong> Ubuntu Server 24.04 LTS for flexibility + Docker support. TrueNAS Scale if you want a polished GUI and ZFS out of the box. Unraid if you want mixed drive sizes without RAID.
+        </div>
+
+        <ul class="steps-list">
+          <li>
+            <span class="step-marker">3.1</span>
+            <div class="step-content">
+              <strong>Flash OS to USB and boot</strong>
+              <p>Use Balena Etcher or Rufus to write the ISO. Boot from USB, follow install wizard. Choose "minimized install" for servers — no GUI bloat.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">3.2</span>
+            <div class="step-content">
+              <strong>Set a static IP address</strong>
+              <p>Edit /etc/netplan/ or use your router's DHCP reservation to assign a permanent local IP (e.g., 192.168.1.100).</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">3.3</span>
+            <div class="step-content">
+              <strong>Enable SSH and harden access</strong>
+              <p>Disable root login, use SSH key auth instead of passwords. Install fail2ban to block brute force attempts.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">3.4</span>
+            <div class="step-content">
+              <strong>Install Docker & Docker Compose</strong>
+              <p>Almost all modern home server apps run in Docker. Use the official Docker install script for your distro.</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="code-block">
+<span class="comment"># Install Docker on Ubuntu</span>
+<span class="cmd">curl</span> -fsSL https://get.docker.com | sh
+<span class="cmd">sudo usermod</span> -aG docker <span class="val">$USER</span>
+
+<span class="comment"># Verify installation</span>
+<span class="cmd">docker</span> --version && <span class="cmd">docker compose</span> version
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="section" id="s4">
+      <div class="section-header" onclick="toggleSection('s4')">
+        <div class="step-num green">04</div>
+        <div class="section-title">Storage Configuration<small>Format drives, set up RAID or ZFS, configure shares</small></div>
+        <div class="toggle-icon">▾</div>
+      </div>
+      <div class="section-body">
+        <table class="compare-table">
+          <thead>
+            <tr><th>RAID Type</th><th>Min Drives</th><th>Redundancy</th><th>Use Case</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>RAID 1 (Mirror)</strong></td>
+              <td>2</td>
+              <td><span class="badge good">1 drive failure</span></td>
+              <td>Simple home setup, easy</td>
+            </tr>
+            <tr>
+              <td><strong>RAID 5</strong></td>
+              <td>3</td>
+              <td><span class="badge good">1 drive failure</span></td>
+              <td>Balanced storage + parity</td>
+            </tr>
+            <tr>
+              <td><strong>ZFS RAIDZ1</strong></td>
+              <td>3</td>
+              <td><span class="badge good">1 drive failure</span></td>
+              <td>Best integrity, checksumming</td>
+            </tr>
+            <tr>
+              <td><strong>No RAID (JBOD)</strong></td>
+              <td>1+</td>
+              <td><span class="badge low">None</span></td>
+              <td>Max capacity, backup elsewhere</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ul class="steps-list">
+          <li>
+            <span class="step-marker">4.1</span>
+            <div class="step-content">
+              <strong>Identify your drives</strong>
+              <p>Run <code style="color:var(--accent);font-size:0.8rem">lsblk</code> and <code style="color:var(--accent);font-size:0.8rem">smartctl -a /dev/sdX</code> to confirm drive health before using them.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">4.2</span>
+            <div class="step-content">
+              <strong>Create ZFS pool (recommended)</strong>
+              <p>ZFS offers checksumming, snapshots, and self-healing. Use <code style="color:var(--accent);font-size:0.8rem">zpool create</code> to set up mirrors or raidz.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">4.3</span>
+            <div class="step-content">
+              <strong>Mount and set permissions</strong>
+              <p>Mount your pool to /mnt/storage. Create subdirectories: /media, /downloads, /backups. Set ownership to your docker user.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">4.4</span>
+            <div class="step-content">
+              <strong>Set up network shares (Samba)</strong>
+              <p>Install Samba for Windows/Mac file sharing. Configure /etc/samba/smb.conf with your share paths and user credentials.</p>
+            </div>
+          </li>
+        </ul>
+        <div class="callout warning">
+          <strong>Important:</strong> RAID is NOT a backup. Always maintain a separate backup of irreplaceable data per the 3-2-1 rule: 3 copies, 2 media types, 1 offsite.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="section" id="s5">
+      <div class="section-header" onclick="toggleSection('s5')">
+        <div class="step-num cyan">05</div>
+        <div class="section-title">Media Server Stack<small>Deploy Jellyfin/Plex + the *arr automation suite</small></div>
+        <div class="toggle-icon">▾</div>
+      </div>
+      <div class="section-body">
+        <div class="card-grid">
+          <div class="card">
+            <div class="card-icon">📺</div>
+            <div class="card-title">Jellyfin</div>
+            <div class="card-desc">Free, open-source media server. No account required, no licensing fees. Full hardware transcoding support.</div>
+            <div class="card-tag">Port 8096</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">🎞️</div>
+            <div class="card-title">Plex Media Server</div>
+            <div class="card-desc">Polished UI, great apps across all devices. Free tier works well; Plex Pass unlocks transcoding and offline sync.</div>
+            <div class="card-tag">Port 32400</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">📡</div>
+            <div class="card-title">Sonarr</div>
+            <div class="card-desc">Automated TV show monitoring and downloading. Integrates with your download client.</div>
+            <div class="card-tag">Port 8989</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">🎬</div>
+            <div class="card-title">Radarr</div>
+            <div class="card-desc">Same as Sonarr, but for movies. Watches for releases and grabs them automatically.</div>
+            <div class="card-tag">Port 7878</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">🔍</div>
+            <div class="card-title">Prowlarr</div>
+            <div class="card-desc">Centralized indexer manager for Sonarr/Radarr. Replaces Jackett with a cleaner UI.</div>
+            <div class="card-tag">Port 9696</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">⬇️</div>
+            <div class="card-title">qBittorrent / NZBGet</div>
+            <div class="card-desc">Download clients that receive tasks from Sonarr/Radarr and save to your media directories.</div>
+            <div class="card-tag">Port 8080</div>
+          </div>
+        </div>
+
+        <div class="code-block">
+<span class="comment"># docker-compose.yml excerpt — Jellyfin</span>
+services:
+  jellyfin:
+    image: <span class="val">jellyfin/jellyfin:latest</span>
+    container_name: jellyfin
+    volumes:
+      - <span class="val">./config/jellyfin:/config</span>
+      - <span class="val">/mnt/storage/media:/media</span>
+    ports:
+      - <span class="val">"8096:8096"</span>
+    devices:
+      - <span class="val">/dev/dri:/dev/dri</span>  <span class="comment"># hardware transcoding</span>
+    restart: unless-stopped
+        </div>
+
+        <div class="callout tip">
+          <strong>Pro tip:</strong> Use Portainer (a Docker GUI) to manage and monitor all your containers visually. It runs as its own container on port 9000.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="section" id="s6">
+      <div class="section-header" onclick="toggleSection('s6')">
+        <div class="step-num purple">06</div>
+        <div class="section-title">Remote Access & Security<small>Access your server safely from anywhere</small></div>
+        <div class="toggle-icon">▾</div>
+      </div>
+      <div class="section-body">
+        <ul class="steps-list">
+          <li>
+            <span class="step-marker">6.1</span>
+            <div class="step-content">
+              <strong>Reverse Proxy with Nginx Proxy Manager</strong>
+              <p>Route subdomains (jellyfin.yourdomain.com) to local container ports with auto SSL via Let's Encrypt. No port forwarding headaches.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">6.2</span>
+            <div class="step-content">
+              <strong>VPN Tunnel with Tailscale or WireGuard</strong>
+              <p>Tailscale is zero-config and free for personal use — installs in minutes and gives you a private mesh network to your server from any device.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">6.3</span>
+            <div class="step-content">
+              <strong>Cloudflare Tunnel (Cloudflared)</strong>
+              <p>Expose services publicly without opening any ports on your router. Free, secure, and works behind CGNAT. Ideal for Jellyfin remote access.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-marker">6.4</span>
+            <div class="step-content">
+              <strong>Firewall with UFW</strong>
+              <p>Enable UFW, deny all incoming by default, and only allow SSH (22), your VPN, and any intentionally exposed ports.</p>
+            </div>
+          </li>
+        </ul>
+        <div class="callout warning">
+          <strong>Never</strong> expose Sonarr, Radarr, or download clients directly to the internet. Keep these behind your VPN or LAN-only.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="section" id="s7">
+      <div class="section-header" onclick="toggleSection('s7')">
+        <div class="step-num yellow">07</div>
+        <div class="section-title">Monitoring & Maintenance<small>Keep your server healthy long-term</small></div>
+        <div class="toggle-icon">▾</div>
+      </div>
+      <div class="section-body">
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Track these regularly to prevent data loss and downtime:</p>
+
+        <ul class="checklist" id="checklist">
+          <li><div class="check-box" onclick="toggle(this)"></div><span>Monitor drive health weekly with <strong>smartmontools</strong></span></li>
+          <li><div class="check-box" onclick="toggle(this)"></div><span>Run <strong>ZFS scrub</strong> monthly to detect silent corruption</span></li>
+          <li><div class="check-box" onclick="toggle(this)"></div><span>Set up <strong>Uptime Kuma</strong> for container/service monitoring alerts</span></li>
+          <li><div class="check-box" onclick="toggle(this)"></div><span>Configure <strong>email/Telegram alerts</strong> from Sonarr/Radarr on failures</span></li>
+          <li><div class="check-box" onclick="toggle(this)"></div><span>Automate OS updates with <strong>unattended-upgrades</strong></span></li>
+          <li><div class="check-box" onclick="toggle(this)"></div><span>Verify backup integrity with test restores quarterly</span></li>
+          <li><div class="check-box" onclick="toggle(this)"></div><span>Keep a <strong>spare drive</strong> on hand for fast replacement</span></li>
+        </ul>
+
+        <div class="callout tip" style="margin-top:20px">
+          <strong>Recommended monitoring stack:</strong> Uptime Kuma (service health) + Grafana + Prometheus (metrics) + Ntfy.sh or Gotify (push notifications). All run as Docker containers.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end guide -->
+
+  <footer>
+    <p>// media-server-guide.html</p>
+    <p>Built with 🖥️ for self-hosters</p>
+  </footer>
+</div>
+
+<script>
+  function toggleSection(id) {
+    const section = document.getElementById(id);
+    section.classList.toggle('collapsed');
+  }
+
+  function toggle(box) {
+    box.classList.toggle('checked');
+    box.textContent = box.classList.contains('checked') ? '✓' : '';
+  }
+
+  // Phase nav highlighting
+  const dots = document.querySelectorAll('.phase-dot');
+  const sections = document.querySelectorAll('.section');
+
+  dots.forEach((dot, i) => {
+    dot.addEventListener('click', () => {
+      dots.forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      sections[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Scroll spy for phase nav
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const idx = Array.from(sections).indexOf(entry.target);
+        dots.forEach(d => d.classList.remove('active'));
+        if (dots[idx]) dots[idx].classList.add('active');
+      }
+    });
+  }, { threshold: 0.4 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
